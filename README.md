@@ -51,7 +51,7 @@ make
 2. A API estará disponível em `http://localhost:8080`
 
 ## 📚 Documentação da API
-A documentação completa da API está disponível em [link-para-documentacao]
+A documentação completa da API estará disponível em uma versão futura!
 
 ### Endpoints Principais
 - `GET /`: Verificação de status da API
@@ -69,10 +69,10 @@ Contribuições são sempre bem-vindas! Por favor, leia as diretrizes de contrib
 5. Abra um Pull Request
 
 ## 📄 Licença
-Este projeto está sob a licença [inserir tipo de licença]. Veja o arquivo `LICENSE` para mais detalhes.
+Este projeto está sob a licença [MIT]. Veja o arquivo `LICENSE` para mais detalhes.
 
 ## 📞 Suporte
-Para suporte, envie um email para [seu-email] ou abra uma issue no GitHub.
+Para suporte, envie um email para [pedroafonsoprogramador@gmail.com] ou abra uma issue no GitHub.
 
 ## 🔮 Roadmap
 - [ ] Implementação completa do sistema de webhooks
