@@ -2,11 +2,28 @@ cmake_minimum_required(VERSION 3.10)
 
 project(wasolution LANGUAGES CXX)
 
-set (CMAKE_CXX_STANDARD 17)
-set (CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+find_package(Boost REQUIRED COMPONENTS system thread)
 
 file(GLOB_RECURSE SOURCES "src/*.cpp")
 
-include_directories(src)
+include_directories(
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${CMAKE_CURRENT_SOURCE_DIR}/dependencies
+    ${Boost_INCLUDE_DIRS}
+)
 
 add_executable(wasolution ${SOURCES})
+
+target_link_libraries(wasolution PRIVATE 
+    ${Boost_LIBRARIES}
+    $<$<PLATFORM_ID:Windows>:ws2_32 mswsock>
+)
+
+if(MSVC)
+    target_compile_options(wasolution PRIVATE /W4)
+else()
+    target_compile_options(wasolution PRIVATE -Wall -Wextra -Wpedantic)
+endif()
