@@ -7,6 +7,7 @@ typedef struct {
     std::string evo_token;
     std::string wuz_url;
     std::string db_url;
+    std::string wuz_token;
 } Env;
 
 class Config{

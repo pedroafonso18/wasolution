@@ -88,5 +88,45 @@ Status Handler::connectInstance(string instance_id) {
     if (auto connection = db.connect(env.db_url); connection.status_code == c_status::ERR) {
         return connection;
     }
-    //TODO: finish handler instance connect
+
+    auto instance = db.fetchInstance(instance_id);
+    if (!instance.has_value()) {
+        stat.status_code = c_status::ERR;
+        stat.status_string = "Couldn't get the instance from the db.\n";
+        return stat;
+    }
+    if (instance.value().instance_type == "WUZAPI") {
+        return Wuzapi::connectInstance_w(instance_id, env.wuz_url);
+    } else if (instance.value().instance_type == "EVOLUTION") {
+        return Evolution::connectInstance_e(instance_id, env.evo_url, env.evo_token);
+    }
+    stat.status_code = c_status::ERR;
+    stat.status_string = "Instance type is not valid.\n";
+    return stat;
+}
+
+Status Handler::deleteInstance(string instance_id) {
+    Config config;
+    Database db;
+    Status stat;
+
+    auto env = config.getEnv();
+    if (auto connection = db.connect(env.db_url); connection.status_code == c_status::ERR) {
+        return connection;
+    }
+
+    auto instance = db.fetchInstance(instance_id);
+    if (!instance.has_value()) {
+        stat.status_code = c_status::ERR;
+        stat.status_string = "Couldn't get the instance from the db.\n";
+        return stat;
+    }
+    if (instance.value().instance_type == "WUZAPI") {
+        return Wuzapi::deleteInstance_w(instance_id, env.wuz_token, env.wuz_url);
+    } else if (instance.value().instance_type == "EVOLUTION") {
+        return Evolution::deleteInstance_e(instance_id, env.evo_token, env.evo_url);
+    }
+    stat.status_code = c_status::ERR;
+    stat.status_string = "Instance type is not valid.\n";
+    return stat;
 }

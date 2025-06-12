@@ -143,7 +143,7 @@ Status Wuzapi::deleteInstance_w(string inst_token, string wuz_token, string url)
     return stat;
 }
 
-Status Wuzapi::connectInstance_w(string inst_token, string wuz_token, string url) {
+Status Wuzapi::connectInstance_w(string inst_token, string url) {
     CURL *curl = curl_easy_init();
     std::string responseBody;
     Status stat;
@@ -153,13 +153,13 @@ Status Wuzapi::connectInstance_w(string inst_token, string wuz_token, string url
         throw std::cerr << "Failed to initialize CURL\n";
     }
 
-    const string req_url = std::format("{}/session/connect/{}", url, inst_token);
+    const string req_url = std::format("{}/session/connect/", url);
 
     std::cout << "URL constructed successfully!\n";
     std::cout << "URL: " << req_url << '\n';
 
     struct curl_slist *headers = nullptr;
-    string authorization = std::format("token: {}", wuz_token);
+    string authorization = std::format("token: {}", inst_token);
 
     headers = curl_slist_append(headers, authorization.c_str());
     headers = curl_slist_append(headers, "Content-Type: application/json");
