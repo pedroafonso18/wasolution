@@ -9,12 +9,12 @@ class Database {
 private:
     std::unique_ptr<pqxx::connection> c;
 public:
-    struct Instance {
+    typedef struct {
         std::string instance_id;
         std::string instance_name;
         std::string instance_type;
         bool is_active;
-    };
+    } Instance;
 
     Database() = default;
     Status connect(const std::string& db_url);
