@@ -1,0 +1,33 @@
+CompileFlags:
+  Add: 
+    - "-IC:/msys64/mingw64/include"
+    - "-IC:/msys64/mingw64/include/boost"
+    - "-IC:/msys64/mingw64/include/boost/beast"
+    - "-IC:/msys64/mingw64/include/boost/asio"
+    - "-IC:/msys64/mingw64/include/boost/system"
+    - "-DBOOST_ALL_NO_LIB"
+    - "-DBOOST_ASIO_STANDALONE"
+    - "-DBOOST_USE_WINDOWS_H"
+    - "-D_WIN32_WINNT=0x0601"
+    - "-DWIN32_LEAN_AND_MEAN"
+    - "-D_CRT_SECURE_NO_WARNINGS"
+    - "-std=c++17"
+    - "-D__STDC_FORMAT_MACROS"
+    - "-D__STDC_LIMIT_MACROS"
+    - "-D__STDC_CONSTANT_MACROS"
+
+Index:
+  Background: Build
+  StandardLibrary: Yes
+
+Diagnostics:
+  ClangTidy:
+    Add: 
+      - performance-*
+      - modernize-*
+      - bugprone-*
+      - cppcoreguidelines-*
+      - readability-*
+    Remove:
+      - modernize-use-trailing-return-type
+      - readability-identifier-length 

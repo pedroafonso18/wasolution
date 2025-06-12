@@ -3,6 +3,9 @@ using std::string;
 
 Status Wuzapi::sendMessage_w(string phone, string token, string url, MediaType type, string msg_template) {
     CURL* curl = curl_easy_init();
+    std::string responseBody;
+    Status stat;
+
     if (!curl) {
         throw std::cerr << "Failed to initialize CURL\n";
     }
@@ -34,21 +37,27 @@ Status Wuzapi::sendMessage_w(string phone, string token, string url, MediaType t
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
     curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "POST");
     curl_easy_setopt(curl, CURLOPT_POSTFIELDS, req_body.c_str());
-    CURLcode res = curl_easy_perform(curl);
 
-    if (res != CURLE_OK) {
+    if (const CURLcode res = curl_easy_perform(curl); res != CURLE_OK) {
         std::cerr << "CURL error: " <<  curl_easy_strerror(res) << '\n';
         curl_slist_free_all(headers);
-        return Status::ERR;
+        stat.status_code = c_status::OK;
+        stat.status_string = curl_easy_strerror(res);
+        return stat;
     }
 
     curl_slist_free_all(headers);
-    return Status::OK;
+    stat.status_code = c_status::OK;
+    stat.status_string = responseBody;
+    return stat;
 }
 
 
 Status Wuzapi::createInstance_w(string wuz_token, string inst_token, string inst_name, string url, string webhook_url, string proxy_url ) {
     CURL *curl = curl_easy_init();
+    std::string responseBody;
+    Status stat;
+
 
     if (!curl) {
         throw std::cerr << "Failed to initialize CURL\n";
@@ -80,26 +89,32 @@ Status Wuzapi::createInstance_w(string wuz_token, string inst_token, string inst
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
     curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "POST");
     curl_easy_setopt(curl, CURLOPT_POSTFIELDS, req_body.c_str());
-    CURLcode res = curl_easy_perform(curl);
 
-    if (res != CURLE_OK) {
+    if (const CURLcode res = curl_easy_perform(curl); res != CURLE_OK) {
         std::cerr << "CURL error: " <<  curl_easy_strerror(res) << '\n';
         curl_slist_free_all(headers);
-        return Status::ERR;
+        stat.status_code = c_status::OK;
+        stat.status_string = curl_easy_strerror(res);
+        return stat;
     }
 
     curl_slist_free_all(headers);
-    return Status::OK;
+    stat.status_code = c_status::OK;
+    stat.status_string = responseBody;
+    return stat;
 }
 
 Status Wuzapi::deleteInstance_w(string inst_token, string wuz_token, string url) {
     CURL *curl = curl_easy_init();
+    std::string responseBody;
+    Status stat;
+
 
     if (!curl) {
         throw std::cerr << "Failed to initialize CURL\n";
     }
 
-    string req_url = std::format("{}/admin/users/{}", url, inst_token);
+    const string req_url = std::format("{}/admin/users/{}", url, inst_token);
 
     std::cout << "URL constructed successfully!\n";
     std::cout << "URL: " << req_url << '\n';
@@ -113,14 +128,17 @@ Status Wuzapi::deleteInstance_w(string inst_token, string wuz_token, string url)
     curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
     curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "DELETE");
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
-    CURLcode res = curl_easy_perform(curl);
 
-    if (res != CURLE_OK) {
+    if (const CURLcode res = curl_easy_perform(curl); res != CURLE_OK) {
         std::cerr << "CURL error: " <<  curl_easy_strerror(res) << '\n';
         curl_slist_free_all(headers);
-        return Status::ERR;
+        stat.status_code = c_status::OK;
+        stat.status_string = curl_easy_strerror(res);
+        return stat;
     }
 
     curl_slist_free_all(headers);
-    return Status::OK;
+    stat.status_code = c_status::OK;
+    stat.status_string = responseBody;
+    return stat;
 }
