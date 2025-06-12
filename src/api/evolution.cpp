@@ -187,3 +187,39 @@ Status Evolution::deleteInstance_e(string inst_token, string evo_token, string u
     return stat;
 }
 
+Status Evolution::connectInstance_e(const string& inst_token, const string &evo_url, const string& evo_token) {
+    CURL *curl = curl_easy_init();
+    std::string responseBody;
+    Status stat;
+    if (!curl) {
+        throw std::cerr << "Failed to initialize CURL\n";
+    }
+    const string req_url = std::format("{}/instance/connect/{}", evo_url, inst_token);
+    std::cout << "URL constructed successfully!\n";
+    std::cout << "URL: " << req_url << '\n';
+
+    struct curl_slist *headers = nullptr;
+    const string authorization = std::format("apikey: {}", evo_token);
+
+    headers = curl_slist_append(headers, authorization.c_str());
+    headers = curl_slist_append(headers, "Content-Type: application/json");
+    headers = curl_slist_append(headers, "accept: application/json");
+
+    curl_easy_setopt(curl, CURLOPT_URL, req_url.c_str());
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &responseBody);
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+    curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "GET");
+
+    if (const CURLcode res = curl_easy_perform(curl); res != CURLE_OK) {
+        std::cerr << "CURL error: " <<  curl_easy_strerror(res) << '\n';
+        curl_slist_free_all(headers);
+        stat.status_code = c_status::OK;
+        stat.status_string = curl_easy_strerror(res);
+        return stat;
+    }
+
+    curl_slist_free_all(headers);
+    stat.status_code = c_status::OK;
+    stat.status_string = responseBody;
+    return stat;
+}

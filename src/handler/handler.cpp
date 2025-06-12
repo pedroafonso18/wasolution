@@ -78,3 +78,15 @@ Status Handler::createInstance(const string &instance_id, const string &instance
     stat.status_string = "Instance created succesfully!\n";
     return stat;
 }
+
+Status Handler::connectInstance(string instance_id) {
+    Config config;
+    Database db;
+    Status stat;
+
+    auto env = config.getEnv();
+    if (auto connection = db.connect(env.db_url); connection.status_code == c_status::ERR) {
+        return connection;
+    }
+    //TODO: finish handler instance connect
+}
