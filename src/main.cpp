@@ -8,6 +8,8 @@
 #include <memory>
 #include <string>
 #include <thread>
+#include "handler/handler.h"
+#include "../dependencies/json.h"
 
 namespace beast = boost::beast;
 namespace http = beast::http;
@@ -15,17 +17,136 @@ namespace net = boost::asio;
 using tcp = net::ip::tcp;
 
 http::response<http::string_body> handle_request(http::request<http::string_body> const& req) {
-    if (req.method() == http::verb::get) {
+    if (req.method() == http::verb::post && req.target() == "/createInstance") {
         http::response<http::string_body> res{http::status::ok, req.version()};
         res.set(http::field::server, "Beast");
-        res.set(http::field::content_type, "text/plain");
+        res.set(http::field::content_type, "application/json");
         res.keep_alive(req.keep_alive());
-        res.body() = "Hello, World!";
+        try {
+            auto body = nlohmann::json::parse(req.body());
+            std::string instance_id = body.at("instance_id").get<std::string>();
+            std::string instance_name = body.at("instance_name").get<std::string>();
+            std::string api_type_str = body.at("api_type").get<std::string>();
+            std::string webhook_url = body.value("webhook_url", "");
+            std::string proxy_url = body.value("proxy_url", "");
+
+            ApiType api_type;
+            if (api_type_str == "EVOLUTION") {
+                api_type = ApiType::EVOLUTION;
+            } else if (api_type_str == "WUZAPI") {
+                api_type = ApiType::WUZAPI;
+            } else {
+                res.result(http::status::bad_request);
+                res.body() = R"({\"error\":\"api_type inválido\"})";
+                res.prepare_payload();
+                return res;
+            }
+
+            Status stat = Handler::createInstance(instance_id, instance_name, api_type, webhook_url, proxy_url);
+            nlohmann::json resp_json;
+            resp_json["status_code"] = stat.status_code;
+            resp_json["status_string"] = stat.status_string;
+            res.body() = resp_json.dump();
+        } catch (const std::exception& e) {
+            res.result(http::status::bad_request);
+            nlohmann::json err_json;
+            err_json["error"] = e.what();
+            res.body() = err_json.dump();
+        }
         res.prepare_payload();
         return res;
     }
-
-    return http::response<http::string_body>{http::status::bad_request, req.version()};
+    if (req.method() == http::verb::post && req.target() == "/sendMessage") {
+        http::response<http::string_body> res{http::status::ok, req.version()};
+        res.set(http::field::server, "Beast");
+        res.set(http::field::content_type, "application/json");
+        res.keep_alive(req.keep_alive());
+        try {
+            auto body = nlohmann::json::parse(req.body());
+            std::string instance_id = body.at("instance_id").get<std::string>();
+            std::string number = body.at("number").get<std::string>();
+            std::string msg_body = body.at("body").get<std::string>();
+            std::string type_str = body.value("type", "TEXT");
+            MediaType type;
+            if (type_str == "TEXT") {
+                type = MediaType::TEXT;
+            } else if (type_str == "IMAGE") {
+                type = MediaType::IMAGE;
+            } else if (type_str == "AUDIO") {
+                type = MediaType::AUDIO;
+            } else {
+                res.result(http::status::bad_request);
+                res.body() = R"({\"error\":\"type inválido\"})";
+                res.prepare_payload();
+                return res;
+            }
+            Status stat = Handler::sendMessage(instance_id, number, msg_body, type);
+            nlohmann::json resp_json;
+            resp_json["status_code"] = stat.status_code;
+            resp_json["status_string"] = stat.status_string;
+            res.body() = resp_json.dump();
+        } catch (const std::exception& e) {
+            res.result(http::status::bad_request);
+            nlohmann::json err_json;
+            err_json["error"] = e.what();
+            res.body() = err_json.dump();
+        }
+        res.prepare_payload();
+        return res;
+    }
+    if (req.method() == http::verb::post && req.target() == "/deleteInstance") {
+        http::response<http::string_body> res{http::status::ok, req.version()};
+        res.set(http::field::server, "Beast");
+        res.set(http::field::content_type, "application/json");
+        res.keep_alive(req.keep_alive());
+        try {
+            auto body = nlohmann::json::parse(req.body());
+            std::string instance_id = body.at("instance_id").get<std::string>();
+            Status stat = Handler::deleteInstance(instance_id);
+            nlohmann::json resp_json;
+            resp_json["status_code"] = stat.status_code;
+            resp_json["status_string"] = stat.status_string;
+            res.body() = resp_json.dump();
+        } catch (const std::exception& e) {
+            res.result(http::status::bad_request);
+            nlohmann::json err_json;
+            err_json["error"] = e.what();
+            res.body() = err_json.dump();
+        }
+        res.prepare_payload();
+        return res;
+    }
+    if (req.method() == http::verb::post && req.target() == "/connectInstance") {
+        http::response<http::string_body> res{http::status::ok, req.version()};
+        res.set(http::field::server, "Beast");
+        res.set(http::field::content_type, "application/json");
+        res.keep_alive(req.keep_alive());
+        try {
+            auto body = nlohmann::json::parse(req.body());
+            std::string instance_id = body.at("instance_id").get<std::string>();
+            Status stat = Handler::connectInstance(instance_id);
+            nlohmann::json resp_json;
+            resp_json["status_code"] = stat.status_code;
+            resp_json["status_string"] = stat.status_string;
+            res.body() = resp_json.dump();
+        } catch (const std::exception& e) {
+            res.result(http::status::bad_request);
+            nlohmann::json err_json;
+            err_json["error"] = e.what();
+            res.body() = err_json.dump();
+        }
+        res.prepare_payload();
+        return res;
+    }
+    http::response<http::string_body> res{http::status::not_found, req.version()};
+    res.set(http::field::server, "Beast");
+    res.set(http::field::content_type, "application/json");
+    res.keep_alive(req.keep_alive());
+    nlohmann::json err_json;
+    err_json["error"] = "Endpoint não encontrado";
+    res.body() = err_json.dump();
+    res.prepare_payload();
+    return res;
 }
 
 class Session : public std::enable_shared_from_this<Session> {
