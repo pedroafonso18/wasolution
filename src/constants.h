@@ -1,6 +1,6 @@
 #pragma once
 
-#include <string>
+#include "../dependencies/json.h"
 
 enum class MediaType {
     IMAGE,
@@ -20,5 +20,5 @@ enum class c_status {
 
 typedef struct {
     c_status status_code;
-    std::string status_string;
+    nlohmann::json status_string;
 } Status;

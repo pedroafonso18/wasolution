@@ -54,8 +54,8 @@ Status Evolution::sendMessage_e(string phone, string token, string url, MediaTyp
     std::string responseBody;
     Status stat;
     if (!curl) {
-        stat.status_string = "Failed to initialize CURL\n";
         stat.status_code = c_status::ERR;
+        stat.status_string = nlohmann::json{{"error", "Failed to initialize CURL"}};
         return stat;
     }
     string req_url;
@@ -92,14 +92,22 @@ Status Evolution::sendMessage_e(string phone, string token, string url, MediaTyp
         curl_slist_free_all(headers);
         curl_easy_cleanup(curl);
         stat.status_code = c_status::ERR;
-        stat.status_string = curl_easy_strerror(res);
+        stat.status_string = nlohmann::json{{"error", curl_easy_strerror(res)}};
         return stat;
     }
 
     curl_slist_free_all(headers);
     curl_easy_cleanup(curl);
     stat.status_code = c_status::OK;
-    stat.status_string = responseBody;
+
+    try {
+        stat.status_string = nlohmann::json::parse(responseBody);
+    } catch (const std::exception& e) {
+        stat.status_string = nlohmann::json{
+            {"raw_response", responseBody}
+        };
+    }
+
     return stat;
 }
 
@@ -109,8 +117,8 @@ Status Evolution::createInstance_e(string evo_token, string inst_token, string i
     Status stat;
     Proxy prox = ParseProxy(proxy_url);
     if (!curl) {
-        stat.status_string = "Failed to initialize CURL\n";
         stat.status_code = c_status::ERR;
+        stat.status_string = nlohmann::json{{"error", "Failed to initialize CURL"}};
         return stat;
     }
     string req_body;
@@ -146,15 +154,23 @@ Status Evolution::createInstance_e(string evo_token, string inst_token, string i
         std::cerr << "CURL error: " <<  curl_easy_strerror(res) << '\n';
         curl_slist_free_all(headers);
         curl_easy_cleanup(curl);
-        stat.status_code = c_status::OK;
-        stat.status_string = curl_easy_strerror(res);
+        stat.status_code = c_status::ERR;
+        stat.status_string = nlohmann::json{{"error", curl_easy_strerror(res)}};
         return stat;
     }
 
     curl_slist_free_all(headers);
     curl_easy_cleanup(curl);
     stat.status_code = c_status::OK;
-    stat.status_string = responseBody;
+
+    try {
+        stat.status_string = nlohmann::json::parse(responseBody);
+    } catch (const std::exception& e) {
+        stat.status_string = nlohmann::json{
+            {"raw_response", responseBody}
+        };
+    }
+
     return stat;
 }
 
@@ -165,8 +181,8 @@ Status Evolution::deleteInstance_e(string inst_token, string evo_token, string u
     Status stat;
 
     if (!curl) {
-        stat.status_string = "Failed to initialize CURL\n";
         stat.status_code = c_status::ERR;
+        stat.status_string = nlohmann::json{{"error", "Failed to initialize CURL"}};
         return stat;
     }
 
@@ -191,15 +207,23 @@ Status Evolution::deleteInstance_e(string inst_token, string evo_token, string u
         std::cerr << "CURL error: " <<  curl_easy_strerror(res) << '\n';
         curl_slist_free_all(headers);
         curl_easy_cleanup(curl);
-        stat.status_code = c_status::OK;
-        stat.status_string = curl_easy_strerror(res);
+        stat.status_code = c_status::ERR;
+        stat.status_string = nlohmann::json{{"error", curl_easy_strerror(res)}};
         return stat;
     }
 
     curl_slist_free_all(headers);
     curl_easy_cleanup(curl);
     stat.status_code = c_status::OK;
-    stat.status_string = responseBody;
+
+    try {
+        stat.status_string = nlohmann::json::parse(responseBody);
+    } catch (const std::exception& e) {
+        stat.status_string = nlohmann::json{
+            {"raw_response", responseBody}
+        };
+    }
+
     return stat;
 }
 
@@ -208,8 +232,8 @@ Status Evolution::connectInstance_e(const string& inst_token, const string &evo_
     std::string responseBody;
     Status stat;
     if (!curl) {
-        stat.status_string = "Failed to initialize CURL\n";
         stat.status_code = c_status::ERR;
+        stat.status_string = nlohmann::json{{"error", "Failed to initialize CURL"}};
         return stat;
     }
     const string req_url = std::format("{}/instance/connect/{}", evo_url, inst_token);
@@ -234,14 +258,22 @@ Status Evolution::connectInstance_e(const string& inst_token, const string &evo_
         std::cerr << "CURL error: " <<  curl_easy_strerror(res) << '\n';
         curl_slist_free_all(headers);
         curl_easy_cleanup(curl);
-        stat.status_code = c_status::OK;
-        stat.status_string = curl_easy_strerror(res);
+        stat.status_code = c_status::ERR;
+        stat.status_string = nlohmann::json{{"error", curl_easy_strerror(res)}};
         return stat;
     }
 
     curl_slist_free_all(headers);
     curl_easy_cleanup(curl);
     stat.status_code = c_status::OK;
-    stat.status_string = responseBody;
+
+    try {
+        stat.status_string = nlohmann::json::parse(responseBody);
+    } catch (const std::exception& e) {
+        stat.status_string = nlohmann::json{
+            {"raw_response", responseBody}
+        };
+    }
+
     return stat;
 }
