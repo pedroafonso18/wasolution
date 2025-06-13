@@ -30,12 +30,15 @@ std::optional<Database::Instance> Database::fetchInstance(const std::string& ins
             return std::nullopt;
         }
         pqxx::work wrk(*c);
-        pqxx::row r = wrk.exec_params1("SELECT instance_id, name, instance_type, is_active FROM instances WHERE instance_id = $1 LIMIT 1", instance_id);
+        pqxx::result res = wrk.exec(
+            "SELECT instance_id, name, instance_type, is_active FROM instances WHERE instance_id = " +
+            wrk.quote(instance_id) + " LIMIT 1"
+        );
         wrk.commit();
-        if (r.empty()) {
-            std::cerr << "Couldn't find any instance matching this id..." << std::endl;
+        if (res.empty()) {
             return std::nullopt;
         }
+        const pqxx::row& r = res[0];
         inst.instance_id = r[0].as<std::string>();
         inst.instance_name = r[1].as<std::string>();
         inst.instance_type = r[2].as<std::string>();
@@ -63,9 +66,14 @@ Status Database::insertInstance(const std::string &instance_id, const std::strin
         }
 
         pqxx::work wrk(*c);
-        pqxx::row r = wrk.exec_params0("INSERT INTO instances (instance_id, name, instance_type, is_active) VALUES ($1, $2, $3, true) RETURNING instance_id", instance_id, instance_name, inst_type);
+        pqxx::result res = wrk.exec(
+            "INSERT INTO instances (instance_id, name, instance_type, is_active) VALUES (" +
+            wrk.quote(instance_id) + ", " +
+            wrk.quote(instance_name) + ", " +
+            wrk.quote(inst_type) + ", true) RETURNING instance_id"
+        );
         wrk.commit();
-        if (r.empty()) {
+        if (res.empty()) {
             stat.status_string = "Couldn't insert the instance into the db...\n";
             stat.status_code = c_status::ERR;
             return stat;
@@ -91,9 +99,13 @@ Status Database::insertLog(const std::string& log_level, const std::string& log_
         }
 
         pqxx::work wrk(*c);
-        pqxx::row r = wrk.exec_params0("INSERT INTO logs (log_level, log_text) VALUES ($1, $2) RETURNING id", log_level, log_text);
+        pqxx::result res = wrk.exec(
+            "INSERT INTO logs (log_level, log_text) VALUES (" +
+            wrk.quote(log_level) + ", " +
+            wrk.quote(log_text) + ") RETURNING id"
+        );
         wrk.commit();
-        if (r.empty()) {
+        if (res.empty()) {
             stat.status_string = "Couldn't insert the log into the db...\n";
             stat.status_code = c_status::ERR;
             return stat;

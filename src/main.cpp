@@ -236,7 +236,8 @@ int main() {
 
         net::io_context ioc{1};
 
-        std::make_shared<Listener>(ioc, tcp::endpoint{address, port})->run();
+        auto listener = std::make_shared<Listener>(ioc, tcp::endpoint{address, port});
+        listener->run();
 
         ioc.run();
     } catch (const std::exception& e) {

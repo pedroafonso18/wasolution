@@ -7,7 +7,9 @@ Status Wuzapi::sendMessage_w(string phone, string token, string url, MediaType t
     Status stat;
 
     if (!curl) {
-        throw std::cerr << "Failed to initialize CURL\n";
+        stat.status_string = "Failed to initialize CURL\n";
+        stat.status_code = c_status::ERR;
+        return stat;
     }
     string req_url;
     string req_body;
@@ -33,7 +35,7 @@ Status Wuzapi::sendMessage_w(string phone, string token, string url, MediaType t
     headers = curl_slist_append(headers, "Content-Type: application/json");
     headers = curl_slist_append(headers, "accept: application/json");
 
-    curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+    curl_easy_setopt(curl, CURLOPT_URL, req_url.c_str());
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
     curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "POST");
     curl_easy_setopt(curl, CURLOPT_POSTFIELDS, req_body.c_str());
@@ -60,18 +62,28 @@ Status Wuzapi::createInstance_w(string wuz_token, string inst_token, string inst
 
 
     if (!curl) {
-        throw std::cerr << "Failed to initialize CURL\n";
+        stat.status_string = "Failed to initialize CURL\n";
+        stat.status_code = c_status::ERR;
+        return stat;
     }
     string req_body;
-    const string req_url = std::format("{}/admin/users");
+    const string req_url = url + "/admin/users";
     if (!proxy_url.empty() && !webhook_url.empty()) {
-        req_body = std::format(R"({{"name":"{}","token": "{}", "webhook" : "{}", "events": "All", "proxyConfig" : "{"enabled": true, "proxyURL" : "{}"}"}})",inst_name, inst_token, webhook_url, proxy_url);
+        req_body = std::string(R"({\"name\":\"") + inst_name +
+                   R"(\",\"token\": \"")" + inst_token +
+                   R"(\",\"webhook\" : \"")" + webhook_url +
+                   R"(\",\"events\": \"All\",\"proxyConfig\" : {\"enabled\": true, \"proxyURL\" : \"")" + proxy_url + R"(\"}})");
     } else if (!proxy_url.empty() && webhook_url.empty()) {
-        req_body = std::format(R"({{"name": "{}", "token": "{}", "proxyConfig" : "{"enabled": true, "proxyURL" : "{}"}"})", inst_name, inst_token, proxy_url);
+        req_body = std::string(R"({\"name\": \"")" + inst_name +
+                   R"(\", \"token\": \"")" + inst_token +
+                   R"(\", \"proxyConfig\" : {\"enabled\": true, \"proxyURL\" : \"")" + proxy_url + R"(\"}})");
     } else if (proxy_url.empty() && !webhook_url.empty()) {
-        req_body = std::format(R"({{"name" : "{}", "token": "{}", "webhook" : "{}", "events" : "All"}})", inst_name, inst_token, webhook_url);
+        req_body = std::string(R"({\"name\" : \"")" + inst_name +
+                   R"(\", \"token\": \"")" + inst_token +
+                   R"(\", \"webhook\" : \"")" + webhook_url + R"(\", \"events\" : \"All\"})");
     } else {
-        req_body = std::format(R"({{"name" : "{}", "token": "{}"}})", inst_name, inst_token);
+        req_body = std::string(R"({\"name\" : \"")" + inst_name +
+                   R"(\", \"token\": \"")" + inst_token + R"(\"})");
     }
 
     std::cout << "BODY and URL constructed successfully!\n";
@@ -79,13 +91,13 @@ Status Wuzapi::createInstance_w(string wuz_token, string inst_token, string inst
     std::cout << "URL: " << req_url << '\n';
 
     struct curl_slist *headers = nullptr;
-    const string authorization = std::format("token: {}", wuz_token);
+    const string authorization = std::string("token: ") + wuz_token;
 
     headers = curl_slist_append(headers, authorization.c_str());
     headers = curl_slist_append(headers, "Content-Type: application/json");
     headers = curl_slist_append(headers, "accept: application/json");
 
-    curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+    curl_easy_setopt(curl, CURLOPT_URL, req_url.c_str());
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
     curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "POST");
     curl_easy_setopt(curl, CURLOPT_POSTFIELDS, req_body.c_str());
@@ -111,7 +123,9 @@ Status Wuzapi::deleteInstance_w(string inst_token, string wuz_token, string url)
 
 
     if (!curl) {
-        throw std::cerr << "Failed to initialize CURL\n";
+        stat.status_string = "Failed to initialize CURL\n";
+        stat.status_code = c_status::ERR;
+        return stat;
     }
 
     const string req_url = std::format("{}/admin/users/{}", url, inst_token);
@@ -125,7 +139,7 @@ Status Wuzapi::deleteInstance_w(string inst_token, string wuz_token, string url)
     headers = curl_slist_append(headers, authorization.c_str());
     headers = curl_slist_append(headers, "Content-Type: application/json");
     headers = curl_slist_append(headers, "accept: application/json");
-    curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+    curl_easy_setopt(curl, CURLOPT_URL, req_url.c_str());
     curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "DELETE");
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
 
@@ -150,7 +164,9 @@ Status Wuzapi::connectInstance_w(string inst_token, string url) {
 
 
     if (!curl) {
-        throw std::cerr << "Failed to initialize CURL\n";
+        stat.status_string = "Failed to initialize CURL\n";
+        stat.status_code = c_status::ERR;
+        return stat;
     }
 
     const string req_url = std::format("{}/session/connect/", url);
@@ -164,7 +180,7 @@ Status Wuzapi::connectInstance_w(string inst_token, string url) {
     headers = curl_slist_append(headers, authorization.c_str());
     headers = curl_slist_append(headers, "Content-Type: application/json");
     headers = curl_slist_append(headers, "accept: application/json");
-    curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+    curl_easy_setopt(curl, CURLOPT_URL, req_url.c_str());
     curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "POST");
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
 

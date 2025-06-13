@@ -53,6 +53,7 @@ Status Handler::createInstance(const string &instance_id, const string &instance
 
     std::string api_type_s;
     auto env = config.getEnv();
+    std::cout << "EVO_URL: " << env.evo_url;
     if (api_type == ApiType::EVOLUTION) {
         api_type_s = "EVOLUTION";
         api_response = Evolution::createInstance_e(env.evo_token, instance_id, instance_name, env.evo_url, webhook_url, proxy_url);

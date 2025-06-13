@@ -5,7 +5,22 @@ project(wasolution LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Set OpenSSL paths before finding packages
+set(OPENSSL_ROOT_DIR "C:/msys64/mingw64")
+set(OPENSSL_INCLUDE_DIR "${OPENSSL_ROOT_DIR}/include")
+set(OPENSSL_LIBRARIES
+    "${OPENSSL_ROOT_DIR}/lib/libssl.dll.a"
+    "${OPENSSL_ROOT_DIR}/lib/libcrypto.dll.a"
+)
+
+# Set ZLIB paths
+set(ZLIB_ROOT "C:/msys64/mingw64")
+set(ZLIB_INCLUDE_DIR "${ZLIB_ROOT}/include")
+set(ZLIB_LIBRARY "${ZLIB_ROOT}/lib/libz.dll.a")
+
 find_package(Boost REQUIRED COMPONENTS system thread)
+find_package(ZLIB REQUIRED)
+find_package(CURL REQUIRED)
 
 file(GLOB_RECURSE SOURCES "src/*.cpp")
 
@@ -13,13 +28,25 @@ include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/src
     ${CMAKE_CURRENT_SOURCE_DIR}/dependencies
     ${Boost_INCLUDE_DIRS}
+    ${OPENSSL_INCLUDE_DIR}
+    ${ZLIB_INCLUDE_DIR}
+)
+
+link_directories(
+    "${OPENSSL_ROOT_DIR}/lib"
+    "${ZLIB_ROOT}/lib"
 )
 
 add_executable(wasolution ${SOURCES})
 
-target_link_libraries(wasolution PRIVATE 
-    ${Boost_LIBRARIES}
-    $<$<PLATFORM_ID:Windows>:ws2_32 mswsock>
+target_link_libraries(wasolution PRIVATE
+        ${Boost_LIBRARIES}
+        $<$<PLATFORM_ID:Windows>:ws2_32 mswsock>
+        CURL::libcurl
+        ${OPENSSL_LIBRARIES}
+        ${ZLIB_LIBRARY}
+        pqxx
+        pq
 )
 
 if(MSVC)
