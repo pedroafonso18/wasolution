@@ -47,6 +47,10 @@ http::response<http::string_body> handle_request(http::request<http::string_body
             resp_json["status_code"] = stat.status_code;
             resp_json["status_string"] = stat.status_string;
             res.body() = resp_json.dump();
+
+            if (stat.status_code == c_status::ERR) {
+                res.result(http::status::internal_server_error);
+            }
         } catch (const std::exception& e) {
             res.result(http::status::bad_request);
             nlohmann::json err_json;
@@ -85,6 +89,10 @@ http::response<http::string_body> handle_request(http::request<http::string_body
             resp_json["status_code"] = stat.status_code;
             resp_json["status_string"] = stat.status_string;
             res.body() = resp_json.dump();
+
+            if (stat.status_code == c_status::ERR) {
+                res.result(http::status::internal_server_error);
+            }
         } catch (const std::exception& e) {
             res.result(http::status::bad_request);
             nlohmann::json err_json;
@@ -107,6 +115,10 @@ http::response<http::string_body> handle_request(http::request<http::string_body
             resp_json["status_code"] = stat.status_code;
             resp_json["status_string"] = stat.status_string;
             res.body() = resp_json.dump();
+
+            if (stat.status_code == c_status::ERR) {
+                res.result(http::status::internal_server_error);
+            }
         } catch (const std::exception& e) {
             res.result(http::status::bad_request);
             nlohmann::json err_json;
@@ -129,6 +141,10 @@ http::response<http::string_body> handle_request(http::request<http::string_body
             resp_json["status_code"] = stat.status_code;
             resp_json["status_string"] = stat.status_string;
             res.body() = resp_json.dump();
+
+            if (stat.status_code == c_status::ERR) {
+                res.result(http::status::internal_server_error);
+            }
         } catch (const std::exception& e) {
             res.result(http::status::bad_request);
             nlohmann::json err_json;
