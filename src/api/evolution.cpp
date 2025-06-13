@@ -85,15 +85,19 @@ Status Evolution::sendMessage_e(string phone, string token, string url, MediaTyp
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
     curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "POST");
     curl_easy_setopt(curl, CURLOPT_POSTFIELDS, req_body.c_str());
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &responseBody);
 
     if (const CURLcode res = curl_easy_perform(curl); res != CURLE_OK) {
         curl_slist_free_all(headers);
+        curl_easy_cleanup(curl);
         stat.status_code = c_status::ERR;
         stat.status_string = curl_easy_strerror(res);
         return stat;
     }
 
     curl_slist_free_all(headers);
+    curl_easy_cleanup(curl);
     stat.status_code = c_status::OK;
     stat.status_string = responseBody;
     return stat;
@@ -118,7 +122,7 @@ Status Evolution::createInstance_e(string evo_token, string inst_token, string i
     } else if (prox.host.empty() && !webhook_url.empty()) {
         req_body = std::format(R"({{"instanceName" : "{}","token" : "{}", "integration": "WHATSAPP-BAILEYS", "qrcode" : true, "webhookUrl" : "{}", "events" : ["MESSAGES_UPSERT"]}})", inst_name, inst_token, webhook_url);
     } else if (prox.host.empty() && webhook_url.empty()) {
-        req_body = std::format(R"({{"instanceName" : "{}","token" : "{}"}})", inst_name, inst_token);
+        req_body = std::format(R"({{"instanceName" : "{}","token" : "{}", "integration": "WHATSAPP-BAILEYS"}})", inst_name, inst_token);
     }
     std::cout << "BODY and URL constructed successfully!\n";
     std::cout << "BODY: " << req_body << '\n';
@@ -132,6 +136,7 @@ Status Evolution::createInstance_e(string evo_token, string inst_token, string i
     headers = curl_slist_append(headers, "accept: application/json");
 
     curl_easy_setopt(curl, CURLOPT_URL, req_url.c_str());
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &responseBody);
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
     curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "POST");
@@ -140,12 +145,14 @@ Status Evolution::createInstance_e(string evo_token, string inst_token, string i
     if (const CURLcode res = curl_easy_perform(curl); res != CURLE_OK) {
         std::cerr << "CURL error: " <<  curl_easy_strerror(res) << '\n';
         curl_slist_free_all(headers);
+        curl_easy_cleanup(curl);
         stat.status_code = c_status::OK;
         stat.status_string = curl_easy_strerror(res);
         return stat;
     }
 
     curl_slist_free_all(headers);
+    curl_easy_cleanup(curl);
     stat.status_code = c_status::OK;
     stat.status_string = responseBody;
     return stat;
@@ -177,16 +184,20 @@ Status Evolution::deleteInstance_e(string inst_token, string evo_token, string u
     curl_easy_setopt(curl, CURLOPT_URL, req_url.c_str());
     curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "DELETE");
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &responseBody);
 
     if (const CURLcode res = curl_easy_perform(curl); res != CURLE_OK) {
         std::cerr << "CURL error: " <<  curl_easy_strerror(res) << '\n';
         curl_slist_free_all(headers);
+        curl_easy_cleanup(curl);
         stat.status_code = c_status::OK;
         stat.status_string = curl_easy_strerror(res);
         return stat;
     }
 
     curl_slist_free_all(headers);
+    curl_easy_cleanup(curl);
     stat.status_code = c_status::OK;
     stat.status_string = responseBody;
     return stat;
@@ -216,16 +227,20 @@ Status Evolution::connectInstance_e(const string& inst_token, const string &evo_
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &responseBody);
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
     curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "GET");
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &responseBody);
 
     if (const CURLcode res = curl_easy_perform(curl); res != CURLE_OK) {
         std::cerr << "CURL error: " <<  curl_easy_strerror(res) << '\n';
         curl_slist_free_all(headers);
+        curl_easy_cleanup(curl);
         stat.status_code = c_status::OK;
         stat.status_string = curl_easy_strerror(res);
         return stat;
     }
 
     curl_slist_free_all(headers);
+    curl_easy_cleanup(curl);
     stat.status_code = c_status::OK;
     stat.status_string = responseBody;
     return stat;

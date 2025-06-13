@@ -22,7 +22,15 @@ find_package(Boost REQUIRED COMPONENTS system thread)
 find_package(ZLIB REQUIRED)
 find_package(CURL REQUIRED)
 
-file(GLOB_RECURSE SOURCES "src/*.cpp")
+set(SOURCES
+    src/main.cpp
+    src/api/evolution.cpp
+    src/api/wuzapi.cpp
+    src/api/api_constants.cpp
+    src/config/config.cpp
+    src/database/database.cpp
+    src/handler/handler.cpp
+)
 
 include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/src

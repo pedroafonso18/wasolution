@@ -53,7 +53,7 @@ Status Handler::createInstance(const string &instance_id, const string &instance
 
     std::string api_type_s;
     auto env = config.getEnv();
-    std::cout << "EVO_URL: " << env.evo_url;
+    std::cout << "EVO_URL: " << env.evo_url << '\n';
     if (api_type == ApiType::EVOLUTION) {
         api_type_s = "EVOLUTION";
         api_response = Evolution::createInstance_e(env.evo_token, instance_id, instance_name, env.evo_url, webhook_url, proxy_url);
@@ -99,7 +99,7 @@ Status Handler::connectInstance(string instance_id) {
     if (instance.value().instance_type == "WUZAPI") {
         return Wuzapi::connectInstance_w(instance_id, env.wuz_url);
     } else if (instance.value().instance_type == "EVOLUTION") {
-        return Evolution::connectInstance_e(instance_id, env.evo_url, env.evo_token);
+        return Evolution::connectInstance_e(instance.value().instance_name, env.evo_url, env.evo_token);
     }
     stat.status_code = c_status::ERR;
     stat.status_string = "Instance type is not valid.\n";

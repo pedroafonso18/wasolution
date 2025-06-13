@@ -1,9 +1,19 @@
 #include "config.h"
 #include "../../dependencies/dotenv.h"
+#include <filesystem>
+#include <iostream>
 
 Config::Config() {
-    dotenv::init();
+    std::string root_path = "../.env";
+    if (std::filesystem::exists(".env")) {
+        root_path = ".env";
+    }
+
+    std::cout << "Tentando carregar .env de: " << root_path << std::endl;
+    dotenv::init(root_path.c_str());
     loadEnv();
+
+    std::cout << "EVO_URL carregada: [" << env_vars.evo_url << "]" << std::endl;
 }
 
 
