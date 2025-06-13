@@ -30,6 +30,7 @@ set(SOURCES
     src/config/config.cpp
     src/database/database.cpp
     src/handler/handler.cpp
+    #src/webhook/webhook.cpp
 )
 
 include_directories(
