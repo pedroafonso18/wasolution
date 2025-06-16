@@ -1,4 +1,6 @@
 #include "webhook.h"
+#include "../api/api_constants.h"
+#include <iostream>
 
 Webhook_t Webhook::deserialize_e(nlohmann::json original_webhook) {
     Webhook_t webhook;
@@ -13,18 +15,18 @@ Webhook_t Webhook::deserialize_e(nlohmann::json original_webhook) {
             msg.message = original_webhook["data"]["message"]["conversation"];
             msg.sender = original_webhook["data"]["sender"];
             msg.receiver = original_webhook["data"]["key"]["remoteJid"];
-            nlohmann::json j = msg;
+            const nlohmann::json j = msg;
             webhook.web_data = j;
             webhook.web_type = WebhookType::MESSAGE;
             return webhook;
         } catch (const std::exception& e) {
             webhook.web_data = {{"error", "Exception when deserializing the webhook."}};
-            webhook.web_type = WebhookType::ERROR;
+            webhook.web_type = WebhookType::W_ERROR;
             return webhook;
         }
     } else {
         webhook.web_data = {{"error", "Webhook type not supported, currently supported types: MESSAGE."}};
-        webhook.web_type = WebhookType::ERROR;
+        webhook.web_type = WebhookType::W_ERROR;
         return webhook;
         }
     }
@@ -42,24 +44,61 @@ Webhook_t Webhook::deserialize_w(nlohmann::json original_webhook)  {
             msg.message = original_webhook["event"]["Message"]["extendedTextMessage"]["text"];
             msg.sender = original_webhook["event"]["Info"]["Sender"];
             msg.receiver = original_webhook["event"]["Info"]["pushName"];
-            nlohmann::json j = msg;
+            const nlohmann::json j = msg;
             webhook.web_data = j;
             webhook.web_type = WebhookType::MESSAGE;
             return webhook;
         } catch (const std::exception& e) {
             webhook.web_data = {{"error", "Exception when deserializing the webhook."}};
-            webhook.web_type = WebhookType::ERROR;
+            webhook.web_type = WebhookType::W_ERROR;
             return webhook;
         }
     } else {
         webhook.web_data = {{"error", "Webhook type not supported, currently supported types: MESSAGE."}};
-        webhook.web_type = WebhookType::ERROR;
+        webhook.web_type = WebhookType::W_ERROR;
         return webhook;
     }
 }
 
-Status Webhook::send_webhook(Webhook_t deserialized_webhook) {
+Status Webhook::send_webhook(Webhook_t deserialized_webhook, std::string url) {
+    CURL *curl = curl_easy_init();
+    std::string responseBody;
+    Status stat;
 
+    if (!curl) {
+        stat.status_code = c_status::ERR;
+        stat.status_string = nlohmann::json{ { "error", "Failed to initialize CURL"}};
+        return stat;
+    }
+
+    std::string req_body = deserialized_webhook.web_data.dump();
+
+    curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+    curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "POST");
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, req_body.c_str());
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &responseBody);
+
+    if (const CURLcode res = curl_easy_perform(curl); res != CURLE_OK) {
+        std::cerr << "CURL error: " <<  curl_easy_strerror(res) << '\n';
+        curl_easy_cleanup(curl);
+        stat.status_code = c_status::ERR;
+        stat.status_string = nlohmann::json{{"error", curl_easy_strerror(res)}};
+        return stat;
+    }
+
+    curl_easy_cleanup(curl);
+    stat.status_code = c_status::OK;
+
+    try {
+        stat.status_string = nlohmann::json::parse(responseBody);
+    } catch (const std::exception& e) {
+        stat.status_string = nlohmann::json{
+                {"raw_response", responseBody}
+        };
+    }
+
+    return stat;
 }
 
 Status Webhook::deserialize_webhook(nlohmann::json original_webhook, ApiType inst_type) {

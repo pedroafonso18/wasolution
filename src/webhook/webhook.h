@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../constants.h"
+#include <curl/curl.h>
 #include "webhook_constant.h"
 
 class Webhook {

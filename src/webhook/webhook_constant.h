@@ -5,7 +5,7 @@
 enum class WebhookType {
     MESSAGE,
     PRESENCE,
-    ERROR
+    W_ERROR
     // TODO: Add more webhook types, for now these will do.
 };
 
