@@ -26,7 +26,7 @@ WASolution é uma API wrapper que unifica as funcionalidades das APIs Evolution 
 ## 🔧 Instalação
 1. Clone o repositório:
 ```bash
-git clone https://github.com/seu-usuario/wasolution.git
+git clone https://github.com/pedroafonso18/wasolution.git
 cd wasolution
 ```
 

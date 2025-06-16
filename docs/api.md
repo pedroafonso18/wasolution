@@ -236,7 +236,7 @@ Endpoint para processar notificações recebidas de uma instância.
 
 O servidor é configurado para executar no IP e porta definidos no código. Por padrão:
 
-- IP: 192.168.0.180
+- IP: 0.0.0.0
 - Porta: 8080
 
 ## Tratamento de Erros
