@@ -69,7 +69,7 @@ Contribuições são sempre bem-vindas! Por favor, leia as diretrizes de contrib
 5. Abra um Pull Request
 
 ## 📄 Licença
-Este projeto está sob a licença [MIT]. Veja o arquivo `LICENSE` para mais detalhes.
+Este projeto está sob a licença [MIT](LICENSE). Veja o arquivo `LICENSE` para mais detalhes.
 
 ## 📞 Suporte
 Para suporte, envie um email para [pedroafonsoprogramador@gmail.com] ou abra uma issue no GitHub.
@@ -77,7 +77,7 @@ Para suporte, envie um email para [pedroafonsoprogramador@gmail.com] ou abra uma
 ## 🔮 Roadmap
 - [ ] Implementação completa do sistema de webhooks
 - [ ] Migrações de banco de dados
-- [ ] Documentação completa da API
+- [X] Documentação completa da API
 - [ ] Testes automatizados
 - [ ] Interface de administração web
 - [ ] Suporte a múltiplas instâncias
