@@ -207,3 +207,50 @@ Status Handler::deleteInstance(string instance_id) {
     stat.status_string = nlohmann::json{{"error", "Instance type is not valid."}};
     return stat;
 }
+
+Status Handler::sendWebhook(nlohmann::json webhook, string inst_id) {
+    Config config;
+    Database db;
+    Status stat;
+
+    auto env = config.getEnv();
+    if (auto connection = db.connect(env.db_url); connection.status_code == c_status::ERR) {
+        return connection;
+    }
+
+    auto instance = db.fetchInstance(inst_id);
+    if (instance.value().instance_type == "WUZAPI") {
+        Status response = Webhook::deserialize_webhook(webhook, ApiType::WUZAPI);
+        try {
+            if (response.status_code == c_status::OK) {
+                response.status_string = nlohmann::json::parse(response.status_string.dump());
+            }
+        } catch (const std::exception& e) {
+            if (response.status_code == c_status::OK) {
+                response.status_string = nlohmann::json{
+                                { "webhook", "Webhook sent successfully!" },
+                                    {"api_response", response.status_string}
+                };
+            }
+        }
+        return response;
+    } else if (instance.value().instance_type == "EVOLUTION") {
+        Status response = Webhook::deserialize_webhook(webhook, ApiType::EVOLUTION);
+        try {
+            if (response.status_code == c_status::OK) {
+                response.status_string = nlohmann::json::parse(response.status_string.dump());
+            }
+        } catch (const std::exception& e) {
+            if (response.status_code == c_status::OK) {
+                response.status_string = nlohmann::json{
+                            {"webhook", "Webhook sent successfully!"},
+                            {"api_response", response.status_string}
+                };
+            }
+        }
+        return response;
+    }
+    stat.status_code = c_status::ERR;
+    stat.status_string = nlohmann::json{{"error", "Instance type is not valid."}};
+    return stat;
+}
