@@ -25,6 +25,6 @@ typedef struct {
     std::string message;
 } Webhook_message;
 
-void to_json(nlohmann::json& j, const Webhook_message& m) {
+inline void to_json(nlohmann::json& j, const Webhook_message& m) {
     j = nlohmann::json{{"instanceId", m.instance_id}, {"instanceName", m.instance_name}, {"webhookType", m.webhook_type}, {"sender", m.sender}, {"receiver", m.receiver}, {"fromMe", m.from_me}, {"dateTime", m.date_time}, {"message", m.message}};
 }

@@ -114,6 +114,7 @@ Status Evolution::sendMessage_e(string phone, string token, string url, MediaTyp
 Status Evolution::createInstance_e(string evo_token, string inst_token, string inst_name, string url, string webhook_url, std::string proxy_url) {
     CURL *curl = curl_easy_init();
     std::string responseBody;
+    std::string web_url = std::format("http://{}:{}/webhook", IP, PORT);
     Status stat;
     Proxy prox = ParseProxy(proxy_url);
     if (!curl) {
@@ -124,11 +125,11 @@ Status Evolution::createInstance_e(string evo_token, string inst_token, string i
     string req_body;
     const string req_url = std::format("{}/instance/create", url);
     if (!prox.host.empty() && !webhook_url.empty()) {
-        req_body = std::format(R"({{"instanceName" : "{}","token" : "{}", "integration": "WHATSAPP-BAILEYS", "qrcode" : true, "webhookUrl" : "{}", "events" : ["MESSAGES_UPSERT"], "proxyHost": "{}", "proxyPort": "{}", "proxyProtocol" : "{}",  "proxyUsername" : "{}", "proxyPassword" : "{}"}})", inst_name, inst_token, webhook_url, prox.host, prox.port, prox.protocol, prox.username, prox.password);
+        req_body = std::format(R"({{"instanceName" : "{}","token" : "{}", "integration": "WHATSAPP-BAILEYS", "qrcode" : true, "webhookUrl" : "{}", "events" : ["MESSAGES_UPSERT"], "proxyHost": "{}", "proxyPort": "{}", "proxyProtocol" : "{}",  "proxyUsername" : "{}", "proxyPassword" : "{}"}})", inst_name, inst_token, web_url, prox.host, prox.port, prox.protocol, prox.username, prox.password);
     } else if (!prox.host.empty() && webhook_url.empty()) {
         req_body = std::format(R"({{"instanceName" : "{}","token" : "{}", "integration": "WHATSAPP-BAILEYS", "qrcode" : true, "proxyHost": "{}", "proxyPort": "{}", "proxyProtocol" : "{}",  "proxyUsername" : "{}", "proxyPassword" : "{}"}})", inst_name, inst_token,prox.host, prox.port, prox.protocol, prox.username, prox.password);
     } else if (prox.host.empty() && !webhook_url.empty()) {
-        req_body = std::format(R"({{"instanceName" : "{}","token" : "{}", "integration": "WHATSAPP-BAILEYS", "qrcode" : true, "webhookUrl" : "{}", "events" : ["MESSAGES_UPSERT"]}})", inst_name, inst_token, webhook_url);
+        req_body = std::format(R"({{"instanceName" : "{}","token" : "{}", "integration": "WHATSAPP-BAILEYS", "qrcode" : true, "webhookUrl" : "{}", "events" : ["MESSAGES_UPSERT"]}})", inst_name, inst_token, web_url);
     } else if (prox.host.empty() && webhook_url.empty()) {
         req_body = std::format(R"({{"instanceName" : "{}","token" : "{}", "integration": "WHATSAPP-BAILEYS"}})", inst_name, inst_token);
     }

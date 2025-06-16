@@ -84,7 +84,7 @@ Status Handler::createInstance(const string &instance_id, const string &instance
     if (auto connection = db.connect(env.db_url); connection.status_code == c_status::ERR) {
         return connection;
     }
-    auto insertion = db.insertInstance(instance_id, instance_name, api_type);
+    auto insertion = db.insertInstance(instance_id, instance_name, api_type, webhook_url);
     if (insertion.status_code == c_status::ERR) {
         return insertion;
     }
@@ -218,9 +218,8 @@ Status Handler::sendWebhook(nlohmann::json webhook, string inst_id) {
         return connection;
     }
 
-    auto instance = db.fetchInstance(inst_id);
-    if (instance.value().instance_type == "WUZAPI") {
-        Status response = Webhook::deserialize_webhook(webhook, ApiType::WUZAPI);
+    if (auto instance = db.fetchInstance(inst_id); instance.value().instance_type == "WUZAPI") {
+        Status response = Webhook::deserialize_webhook(webhook, ApiType::WUZAPI, instance.value().webhook_url.value());
         try {
             if (response.status_code == c_status::OK) {
                 response.status_string = nlohmann::json::parse(response.status_string.dump());
@@ -235,7 +234,7 @@ Status Handler::sendWebhook(nlohmann::json webhook, string inst_id) {
         }
         return response;
     } else if (instance.value().instance_type == "EVOLUTION") {
-        Status response = Webhook::deserialize_webhook(webhook, ApiType::EVOLUTION);
+        Status response = Webhook::deserialize_webhook(webhook, ApiType::EVOLUTION, instance.value().webhook_url.value());
         try {
             if (response.status_code == c_status::OK) {
                 response.status_string = nlohmann::json::parse(response.status_string.dump());

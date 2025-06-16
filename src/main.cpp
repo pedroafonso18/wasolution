@@ -273,12 +273,11 @@ private:
 
 int main() {
     try {
-        auto const address = net::ip::make_address("0.0.0.0");
-        unsigned short port = 8080;
+        auto const address = net::ip::make_address(IP);
 
         net::io_context ioc{1};
 
-        auto listener = std::make_shared<Listener>(ioc, tcp::endpoint{address, port});
+        auto listener = std::make_shared<Listener>(ioc, tcp::endpoint{address, PORT});
         listener->run();
 
         ioc.run();

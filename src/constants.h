@@ -2,6 +2,9 @@
 
 #include "../dependencies/json.h"
 
+#define PORT 8080
+#define IP "192.168.0.180"
+
 enum class MediaType {
     IMAGE,
     AUDIO,

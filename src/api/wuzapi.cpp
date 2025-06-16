@@ -70,6 +70,7 @@ Status Wuzapi::createInstance_w(string wuz_token, string inst_token, string inst
     CURL *curl = curl_easy_init();
     std::string responseBody;
     Status stat;
+    std::string web_url = std::format("http://{}:{}/webhook", IP, PORT);
 
     if (!curl) {
         stat.status_code = c_status::ERR;
@@ -80,9 +81,9 @@ Status Wuzapi::createInstance_w(string wuz_token, string inst_token, string inst
     string req_body;
     const string req_url = std::format("{}/admin/users", url);
     if (!webhook_url.empty() && !proxy_url.empty()) {
-        req_body = std::format(R"({{"name" : "{}", "token" : "{}", "webhookUrl" : "{}","events": "All", "proxyConfig" : {{"enabled" : true, "proxyUrl" : "{}"}}}})", inst_name, inst_token, webhook_url, proxy_url);
+        req_body = std::format(R"({{"name" : "{}", "token" : "{}", "webhookUrl" : "{}","events": "All", "proxyConfig" : {{"enabled" : true, "proxyUrl" : "{}"}}}})", inst_name, inst_token, web_url, proxy_url);
     }else if (!webhook_url.empty() && proxy_url.empty()) {
-        req_body = std::format(R"({{"name" : "{}", "token" : "{}", "webhookUrl" : "{}","events": "All"}})", inst_name, inst_token, webhook_url);
+        req_body = std::format(R"({{"name" : "{}", "token" : "{}", "webhookUrl" : "{}","events": "All"}})", inst_name, inst_token, web_url);
     } else if (webhook_url.empty() && !proxy_url.empty()) {
         req_body = std::format(R"({{"name" : "{}", "token" : "{}", "proxyConfig" : {{"enabled" : true, "proxyUrl" : "{}"}}}})", inst_name, inst_token, proxy_url);
     } else {

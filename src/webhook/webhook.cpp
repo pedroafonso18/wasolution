@@ -101,12 +101,12 @@ Status Webhook::send_webhook(Webhook_t deserialized_webhook, std::string url) {
     return stat;
 }
 
-Status Webhook::deserialize_webhook(nlohmann::json original_webhook, ApiType inst_type) {
+Status Webhook::deserialize_webhook(nlohmann::json json_data, ApiType api_type, std::string url) {
     Webhook_t webhook;
     Status stat;
-    if (inst_type == ApiType::WUZAPI) {
-        webhook = deserialize_w(original_webhook);
-        Status response = send_webhook(webhook);
+    if (api_type == ApiType::WUZAPI) {
+        webhook = deserialize_w(json_data);
+        Status response = send_webhook(webhook, url);
         try {
             if (response.status_code == c_status::OK) {
                 response.status_string = nlohmann::json::parse(response.status_string.dump());
@@ -120,9 +120,9 @@ Status Webhook::deserialize_webhook(nlohmann::json original_webhook, ApiType ins
             }
         }
         return response;
-    } else if (inst_type == ApiType::EVOLUTION) {
-        webhook = deserialize_e(original_webhook);
-        Status response = send_webhook(webhook);
+    } else if (api_type == ApiType::EVOLUTION) {
+        webhook = deserialize_e(json_data);
+        Status response = send_webhook(webhook, url);
         try {
             if (response.status_code == c_status::OK) {
                 response.status_string = nlohmann::json::parse(response.status_string.dump());

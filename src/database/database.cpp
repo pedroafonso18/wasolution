@@ -31,7 +31,7 @@ std::optional<Database::Instance> Database::fetchInstance(const std::string& ins
         }
         pqxx::work wrk(*c);
         pqxx::result res = wrk.exec(
-            "SELECT instance_id, name, instance_type, is_active FROM instances WHERE instance_id = " +
+            "SELECT instance_id, name, instance_type, is_active, webhook_url FROM instances WHERE instance_id = " +
             wrk.quote(instance_id) + " LIMIT 1"
         );
         wrk.commit();
@@ -43,6 +43,7 @@ std::optional<Database::Instance> Database::fetchInstance(const std::string& ins
         inst.instance_name = r[1].as<std::string>();
         inst.instance_type = r[2].as<std::string>();
         inst.is_active = r[3].as<bool>();
+        inst.webhook_url = r[4].as<std::string>();
         return inst;
     } catch (const std::exception& e) {
         std::cerr << e.what() << std::endl;
@@ -50,7 +51,7 @@ std::optional<Database::Instance> Database::fetchInstance(const std::string& ins
     }
 }
 
-Status Database::insertInstance(const std::string &instance_id, const std::string &instance_name, const ApiType &instance_type) {
+Status Database::insertInstance(const std::string &instance_id, const std::string &instance_name, const ApiType &instance_type, std::optional<std::string> webhook_url) {
     Status stat;
     try {
         if (!c || !c->is_open()) {
@@ -64,14 +65,24 @@ Status Database::insertInstance(const std::string &instance_id, const std::strin
         } else if (instance_type == ApiType::WUZAPI) {
             inst_type = "WUZAPI";
         }
-
+        pqxx::result res;
         pqxx::work wrk(*c);
-        pqxx::result res = wrk.exec(
-            "INSERT INTO instances (instance_id, name, instance_type, is_active) VALUES (" +
-            wrk.quote(instance_id) + ", " +
-            wrk.quote(instance_name) + ", " +
-            wrk.quote(inst_type) + ", true) RETURNING instance_id"
-        );
+        if (!webhook_url.has_value()) {
+            res = wrk.exec(
+                "INSERT INTO instances (instance_id, name, instance_type, is_active) VALUES (" +
+                wrk.quote(instance_id) + ", " +
+                wrk.quote(instance_name) + ", " +
+                wrk.quote(inst_type) + ", true) RETURNING instance_id"
+            );
+        } else if (webhook_url.has_value()) {
+            res = wrk.exec(
+                "INSERT INTO instances (instance_id, name, webhook_url, instance_type, is_active) VALUES (" +
+                wrk.quote(instance_id) + ", " +
+                wrk.quote(instance_name) + ", " +
+                wrk.quote(webhook_url.value()) + ", " +
+                wrk.quote(inst_type) + ", true) RETURNING instance_id"
+            );
+        }
         wrk.commit();
         if (res.empty()) {
             stat.status_string = "Couldn't insert the instance into the db...\n";
@@ -89,7 +100,7 @@ Status Database::insertInstance(const std::string &instance_id, const std::strin
     }
 }
 
-Status Database::insertLog(const std::string& log_level, const std::string& log_text) {
+Status Database::insertLog(const std::string& log_level, const std::string& log_text) const {
     Status stat;
     try {
         if (!c || !c->is_open()) {
