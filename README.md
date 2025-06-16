@@ -51,7 +51,7 @@ make
 2. A API estará disponível em `http://localhost:8080`
 
 ## 📚 Documentação da API
-A documentação completa da API estará disponível em uma versão futura!
+[DOCUMENTAÇÃO](docs/api.md)
 
 ### Endpoints Principais
 - `GET /`: Verificação de status da API
