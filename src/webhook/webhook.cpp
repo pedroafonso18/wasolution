@@ -3,12 +3,59 @@
 Webhook_t Webhook::deserialize_e(nlohmann::json original_webhook) {
     Webhook_t webhook;
     if (original_webhook.contains("event") && original_webhook["event"] == "send.message") {
-
+        try {
+            Webhook_message msg;
+            msg.webhook_type = "message";
+            msg.from_me = original_webhook["data"]["key"]["fromMe"];
+            msg.date_time = original_webhook["date_time"];
+            msg.instance_id = original_webhook["data"]["instanceId"];
+            msg.instance_name = original_webhook["instance"];
+            msg.message = original_webhook["data"]["message"]["conversation"];
+            msg.sender = original_webhook["data"]["sender"];
+            msg.receiver = original_webhook["data"]["key"]["remoteJid"];
+            nlohmann::json j = msg;
+            webhook.web_data = j;
+            webhook.web_type = WebhookType::MESSAGE;
+            return webhook;
+        } catch (const std::exception& e) {
+            webhook.web_data = {{"error", "Exception when deserializing the webhook."}};
+            webhook.web_type = WebhookType::ERROR;
+            return webhook;
+        }
+    } else {
+        webhook.web_data = {{"error", "Webhook type not supported, currently supported types: MESSAGE."}};
+        webhook.web_type = WebhookType::ERROR;
+        return webhook;
+        }
     }
-}
 
-Webhook_t Webhook::deserialize_w(nlohmann::json original_webhook) {
-
+Webhook_t Webhook::deserialize_w(nlohmann::json original_webhook)  {
+    Webhook_t webhook;
+    if (original_webhook.contains("type") && original_webhook["type"] == "Message") {
+        try {
+            Webhook_message msg;
+            msg.webhook_type = "message";
+            msg.from_me = original_webhook["event"]["Info"]["isFromMe"];
+            msg.date_time = original_webhook["event"]["Info"]["Timestamp"];
+            msg.instance_id = original_webhook["token"];
+            msg.instance_name = original_webhook["instance_name"];
+            msg.message = original_webhook["event"]["Message"]["extendedTextMessage"]["text"];
+            msg.sender = original_webhook["event"]["Info"]["Sender"];
+            msg.receiver = original_webhook["event"]["Info"]["pushName"];
+            nlohmann::json j = msg;
+            webhook.web_data = j;
+            webhook.web_type = WebhookType::MESSAGE;
+            return webhook;
+        } catch (const std::exception& e) {
+            webhook.web_data = {{"error", "Exception when deserializing the webhook."}};
+            webhook.web_type = WebhookType::ERROR;
+            return webhook;
+        }
+    } else {
+        webhook.web_data = {{"error", "Webhook type not supported, currently supported types: MESSAGE."}};
+        webhook.web_type = WebhookType::ERROR;
+        return webhook;
+    }
 }
 
 Status Webhook::send_webhook(Webhook_t deserialized_webhook) {
