@@ -131,3 +131,34 @@ Status Database::insertLog(const std::string& log_level, const std::string& log_
         return stat;
     }
 }
+
+Status Database::deleteInstance(const std::string &instance_id) {
+    Status stat;
+    try {
+        if (!c || !c->is_open()) {
+            stat.status_string = "DB connection is not open, returning error...\n";
+            stat.status_code = c_status::ERR;
+            return stat;
+        }
+
+        pqxx::work wrk(*c);
+        pqxx::result res = wrk.exec(
+            "DELETE FROM instances WHERE instance_id = " +
+            wrk.quote(instance_id)
+        );
+        wrk.commit();
+        if (res.empty()) {
+            stat.status_string = "Couldn't delete the instance from the db...\n";
+            stat.status_code = c_status::ERR;
+            return stat;
+        }
+        stat.status_code = c_status::OK;
+        stat.status_string = "Successfully deleted the instance from the db!\n";
+        return stat;
+
+    } catch (const std::exception& e) {
+        stat.status_string = e.what();
+        stat.status_code = c_status::ERR;
+        return stat;
+    }
+}

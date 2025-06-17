@@ -128,6 +128,32 @@ http::response<http::string_body> handle_request(http::request<http::string_body
         res.prepare_payload();
         return res;
     }
+    if (req.method() == http::verb::post && req.target() == "/logoutInstance") {
+        http::response<http::string_body> res{http::status::ok, req.version()};
+        res.set(http::field::server, "Beast");
+        res.set(http::field::content_type, "application/json");
+        res.keep_alive(req.keep_alive());
+        try {
+            auto body = nlohmann::json::parse(req.body());
+            std::string instance_id = body.at("instance_id").get<std::string>();
+            Status stat = Handler::logoutInstance(instance_id);
+            nlohmann::json resp_json;
+            resp_json["status_code"] = stat.status_code;
+            resp_json["status_string"] = stat.status_string;
+            res.body() = resp_json.dump();
+
+            if (stat.status_code == c_status::ERR) {
+                res.result(http::status::internal_server_error);
+            }
+        } catch (const std::exception& e) {
+            res.result(http::status::bad_request);
+            nlohmann::json err_json;
+            err_json["error"] = e.what();
+            res.body() = err_json.dump();
+        }
+        res.prepare_payload();
+        return res;
+    }
     if (req.method() == http::verb::post && req.target() == "/connectInstance") {
         http::response<http::string_body> res{http::status::ok, req.version()};
         res.set(http::field::server, "Beast");

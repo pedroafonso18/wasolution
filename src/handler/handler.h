@@ -19,5 +19,6 @@ class Handler {
         static Status createInstance(const string &instance_id, const string &instance_name, ApiType api_type, std::string webhook_url, std::string proxy_url);
         static Status deleteInstance(string instance_id);
         static Status connectInstance(string instance_id);
+        static Status logoutInstance(string instance_id);
         static Status sendWebhook(nlohmann::json webhook, string inst_id);
 };
