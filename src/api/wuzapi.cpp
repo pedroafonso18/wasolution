@@ -181,6 +181,13 @@ Status Wuzapi::sendMessage_w(string phone, string token, string url, MediaType t
 Status Wuzapi::createInstance_w(string inst_token, string url, string webhook_url, string proxy_url) {
     Status stat;
 
+    if (!proxy_url.empty()) {
+        stat = setProxy_w(inst_token, proxy_url, url);
+        if (stat.status_code == c_status::ERR) {
+            return stat;
+        }
+    }
+
     if (!webhook_url.empty()) {
         stat = setWebhook_w(inst_token, webhook_url, url);
         if (stat.status_code == c_status::ERR) {
@@ -265,14 +272,17 @@ Status Wuzapi::connectInstance_w(string inst_token, string url) {
         return stat;
     }
 
-    const string req_url = std::format("{}/instance/connect", url);
-    string req_body = std::format(R"({{"token" : "{}"}})", inst_token);
+    const string req_url = std::format("{}/session/connect", url);
+    string header_auth = std::format("token: {}", inst_token);
+
+    string req_body = std::format(R"({{"Subscribe": ["Message", "ChatPresence"], "Immediate": true}})");
 
     std::cout << "BODY and URL constructed successfully!\n";
     std::cout << "BODY: " << req_body << '\n';
     std::cout << "URL: " << req_url << '\n';
 
     struct curl_slist *headers = nullptr;
+    headers = curl_slist_append(headers, header_auth.c_str());
     headers = curl_slist_append(headers, "Content-Type: application/json");
     headers = curl_slist_append(headers, "accept: application/json");
 
