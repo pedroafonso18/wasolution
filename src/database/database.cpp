@@ -195,3 +195,77 @@ Status Database::createInstance_w(std::string inst_token, std::string inst_name)
         return stat;
     }
 }
+
+std::optional<std::string> Database::getQrCodeFromDB(const std::string& token) const {
+    try {
+        if (!c || !c->is_open()) {
+            std::cerr << "DB connection is not open, returning nullopt...\n";
+            return std::nullopt;
+        }
+
+        std::cout << "Procurando QR Code no banco para o token: [" << token << "]" << std::endl;
+
+        pqxx::work wrk(*c);
+
+        std::string sql_query = "SELECT qrcode FROM users WHERE id = " +
+                               wrk.quote(token) + " OR token = " +
+                               wrk.quote(token) + " LIMIT 1";
+
+        std::cout << "Executando SQL: " << sql_query << std::endl;
+
+        pqxx::result res = wrk.exec(sql_query);
+        wrk.commit();
+
+        std::cout << "Consulta executada, número de linhas: " << res.size() << std::endl;
+
+        if (res.empty()) {
+            std::cout << "Nenhum registro encontrado no banco para o token fornecido." << std::endl;
+            return std::nullopt;
+        }
+
+        if (res[0][0].is_null()) {
+            std::cout << "QR Code é NULL no banco de dados." << std::endl;
+            return std::nullopt;
+        }
+
+        std::string qrcode = res[0][0].as<std::string>();
+        std::cout << "QR Code encontrado no banco, tamanho: " << qrcode.length() << " caracteres" << std::endl;
+
+        return qrcode;
+    } catch (const std::exception& e) {
+        std::cerr << "Erro ao recuperar QR Code: " << e.what() << std::endl;
+        return std::nullopt;
+    }
+}
+
+Status Database::deleteInstance_w(std::string inst_token) {
+    Status stat;
+    try {
+        if (!c || !c->is_open()) {
+            stat.status_string = "DB connection is not open, returning error...\n";
+            stat.status_code = c_status::ERR;
+            return stat;
+        }
+
+        pqxx::work wrk(*c);
+        pqxx::result res = wrk.exec(
+            "DELETE FROM users WHERE id = " +
+            wrk.quote(inst_token) + " OR token = " +
+            wrk.quote(inst_token)
+        );
+        wrk.commit();
+        if (res.empty()) {
+            stat.status_string = "Couldn't delete the instance from the db...\n";
+            stat.status_code = c_status::ERR;
+            return stat;
+        }
+        stat.status_code = c_status::OK;
+        stat.status_string = "Successfully deleted the instance from the db!\n";
+        return stat;
+
+    } catch (const std::exception& e) {
+        stat.status_string = e.what();
+        stat.status_code = c_status::ERR;
+        return stat;
+    }
+}

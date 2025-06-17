@@ -1,6 +1,9 @@
 #include "wuzapi.h"
 
+#include <thread>
+
 #include "config/config.h"
+#include "database/database.h"
 using std::string;
 
 
@@ -57,6 +60,126 @@ Status Wuzapi::setProxy_w(string token, string proxy_url, string url) {
 
     return stat;
 }
+
+Status Wuzapi::getQrCode_w(string token, string url) {
+    CURL *curl = curl_easy_init();
+    std::string responseBody;
+    Status stat;
+
+    if (!curl) {
+        stat.status_code = c_status::ERR;
+        stat.status_string = nlohmann::json{{"error", "Failed to initialize CURL"}};
+        return stat;
+    }
+
+    const string req_url = std::format("{}/session/qr", url);
+    string req_hdr = std::format("token: {}", token);
+    std::cout << "URL constructed successfully!\n";
+    std::cout << "URL: " << req_url << '\n';
+
+    struct curl_slist *headers = nullptr;
+    headers = curl_slist_append(headers, "Content-Type: application/json");
+    headers = curl_slist_append(headers, "accept: application/json");
+    headers = curl_slist_append(headers, req_hdr.c_str());
+
+    curl_easy_setopt(curl, CURLOPT_URL, req_url.c_str());
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+    curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "GET");
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &responseBody);
+
+    if (const CURLcode res = curl_easy_perform(curl); res != CURLE_OK) {
+        std::cerr << "CURL error: " <<  curl_easy_strerror(res) << '\n';
+        curl_slist_free_all(headers);
+        curl_easy_cleanup(curl);
+        stat.status_code = c_status::ERR;
+        stat.status_string = nlohmann::json{{"error", curl_easy_strerror(res)}};
+        return stat;
+    }
+
+    curl_slist_free_all(headers);
+    curl_easy_cleanup(curl);
+    stat.status_code = c_status::OK;
+
+    try {
+        nlohmann::json response = nlohmann::json::parse(responseBody);
+        std::cout << "Resposta recebida da API: " << responseBody << std::endl;
+
+        stat.status_string = response;
+
+        std::cout << "Estrutura da resposta: ";
+        for (auto& [key, value] : response.items()) {
+            std::cout << "Chave: " << key << ", ";
+        }
+        std::cout << std::endl;
+
+        bool needQrFromDb = false;
+
+        if (response.contains("data") && response["data"].is_object() &&
+            response["data"].contains("QRCode") &&
+            (response["data"]["QRCode"].empty() || response["data"]["QRCode"] == "")) {
+            std::cout << "Caso 1: QRCode vazio encontrado em data.QRCode" << std::endl;
+            needQrFromDb = true;
+        }
+
+        if (needQrFromDb) {
+            std::cout << "QR Code não encontrado ou vazio na resposta da API, buscando no banco de dados...\n";
+            Config cfg;
+            Database db;
+            auto db_url = cfg.getEnv().db_url_wuz;
+            std::cout << "Conectando ao banco de dados com URL: " << db_url << std::endl;
+
+            if (db.connect(db_url).status_code != c_status::OK) {
+                std::cerr << "Falha ao conectar ao banco de dados\n";
+                return stat;
+            }
+
+            std::cout << "Aguardando 500ms antes de buscar o QR Code..." << std::endl;
+            std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
+            std::cout << "Buscando QR Code para o token: " << token << std::endl;
+            auto qrCode = db.getQrCodeFromDB(token);
+
+            if (!qrCode.has_value() || qrCode->empty()) {
+                std::cout << "QR Code não encontrado ou vazio no banco, aguardando mais 1.5 segundos e tentando novamente..." << std::endl;
+                std::this_thread::sleep_for(std::chrono::milliseconds(1500));
+                qrCode = db.getQrCodeFromDB(token);
+            }
+
+            if (qrCode.has_value() && !qrCode->empty()) {
+                std::cout << "QR Code válido encontrado no banco de dados!\n";
+
+                if (response.contains("data") && response["data"].is_object()) {
+                    if (response["data"].contains("QRCode")) {
+                        response["data"]["QRCode"] = qrCode.value();
+                    } else {
+                        response["data"]["QRCode"] = qrCode.value();
+                    }
+                } else {
+                    response["data"] = {{"QRCode", qrCode.value()}};
+                }
+
+                stat.status_string = response;
+                std::cout << "Resposta modificada com QR Code do banco: " << response.dump() << std::endl;
+            } else {
+                std::cerr << "Não foi possível encontrar um QR Code válido no banco de dados para o token: " << token << "\n";
+                std::cerr << "O QR Code pode estar vazio ou ainda não ter sido gerado completamente.\n";
+            }
+        } else {
+            std::cout << "QR Code já presente na resposta ou estrutura não reconhecida. Sem necessidade de buscar no banco.\n";
+        }
+    } catch (const std::exception& e) {
+        std::cerr << "Exceção ao processar resposta: " << e.what() << std::endl;
+        stat.status_string = nlohmann::json{
+            {"raw_response", responseBody},
+            {"error", e.what()}
+        };
+    }
+
+    return stat;
+}
+
+
 
 Status Wuzapi::setWebhook_w(string token, string webhook_url, string url) {
     CURL *curl = curl_easy_init();
@@ -202,10 +325,16 @@ Status Wuzapi::createInstance_w(string inst_token, string url, string webhook_ur
         }
     }
 
-    return connectInstance_w(inst_token, url);
+
+
+    if (auto conn = connectInstance_w(inst_token, url); conn.status_code == c_status::ERR) {
+        return conn;
+    }
+
+    return getQrCode_w(inst_token, url);
 }
 
-Status Wuzapi::deleteInstance_w(string inst_token, string wuz_token, string url) {
+Status Wuzapi::deleteInstance_w(string inst_token, string url) {
     CURL *curl = curl_easy_init();
     std::string responseBody;
     Status stat;
@@ -216,24 +345,21 @@ Status Wuzapi::deleteInstance_w(string inst_token, string wuz_token, string url)
         return stat;
     }
 
-    const string req_url = std::format("{}/instance/delete", url);
-    string req_body = std::format(R"({{"token" : "{}"}})", inst_token);
+    const string req_url = std::format("{}/session/logout", url);
+    string auth_token = std::format("token: {}", inst_token);
 
-    std::cout << "BODY and URL constructed successfully!\n";
-    std::cout << "BODY: " << req_body << '\n';
+    std::cout << "URL constructed successfully!\n";
     std::cout << "URL: " << req_url << '\n';
 
     struct curl_slist *headers = nullptr;
-    const string authorization = std::format("token: {}", wuz_token);
 
-    headers = curl_slist_append(headers, authorization.c_str());
+    headers = curl_slist_append(headers, auth_token.c_str());
     headers = curl_slist_append(headers, "Content-Type: application/json");
     headers = curl_slist_append(headers, "accept: application/json");
 
     curl_easy_setopt(curl, CURLOPT_URL, req_url.c_str());
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
     curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "POST");
-    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, req_body.c_str());
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &responseBody);
 

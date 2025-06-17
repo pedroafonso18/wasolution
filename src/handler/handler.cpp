@@ -177,7 +177,8 @@ Status Handler::deleteInstance(string instance_id) {
         return stat;
     }
     if (instance.value().instance_type == "WUZAPI") {
-        Status response = Wuzapi::deleteInstance_w(instance_id, env.wuz_token, env.wuz_url);
+        Database db_wuz;
+        Status response = Wuzapi::deleteInstance_w(instance_id, env.wuz_url);
         try {
             if (response.status_code == c_status::OK) {
                 response.status_string = nlohmann::json::parse(response.status_string.dump());
@@ -198,7 +199,13 @@ Status Handler::deleteInstance(string instance_id) {
                           << dbStatus.status_string.dump() << std::endl;
             }
         }
+        if (auto connection = db_wuz.connect(env.db_url_wuz); connection.status_code == c_status::ERR) {
+            return connection;
+        }
 
+        if (auto del = db.deleteInstance_w(instance_id); del.status_code == c_status::ERR) {
+            return del;
+        }
         return response;
     } else if (instance.value().instance_type == "EVOLUTION") {
         Status response = Evolution::deleteInstance_e(instance_id, env.evo_token, env.evo_url);
