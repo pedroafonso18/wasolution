@@ -174,8 +174,9 @@ Status Database::createInstance_w(std::string inst_token, std::string inst_name)
 
         pqxx::work wrk(*c);
         pqxx::result res = wrk.exec(
-            "INSERT INTO users (name, token) VALUES (" +
+            "INSERT INTO users (name, token, id) VALUES (" +
             wrk.quote(inst_name) + ", " +
+            wrk.quote(inst_token) + ", " +
             wrk.quote(inst_token) + ") RETURNING id"
         );
         wrk.commit();
