@@ -10,6 +10,7 @@ typedef struct {
     std::string db_url;
     std::string wuz_token;
     std::string callback_url;
+    std::string db_url_wuz;
 } Env;
 
 class Config{

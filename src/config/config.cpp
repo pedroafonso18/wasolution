@@ -22,20 +22,21 @@ Config::Config() {
 std::string Config::getLocalIP() {
     try {
         boost::asio::io_context io_context;
-        boost::asio::ip::tcp::resolver resolver(io_context);
-        auto endpoints = resolver.resolve(boost::asio::ip::host_name(), "");
 
-        for (const auto& endpoint : endpoints) {
-            if (endpoint.endpoint().address().is_v4()) {
-                return endpoint.endpoint().address().to_string();
-            }
-        }
+        boost::asio::ip::udp::resolver resolver(io_context);
+        boost::asio::ip::udp::endpoint remote_endpoint =
+            *resolver.resolve(boost::asio::ip::udp::v4(), "8.8.8.8", "80").begin();
+
+        boost::asio::ip::udp::socket socket(io_context);
+        socket.connect(remote_endpoint);
+
+        boost::asio::ip::udp::endpoint local_endpoint = socket.local_endpoint();
+        return local_endpoint.address().to_string();
     }
     catch (std::exception& e) {
-        std::cerr << "Erro ao obter IP local: " << e.what() << std::endl;
+        std::cerr << "Error getting local IP: " << e.what() << std::endl;
+        return "localhost";
     }
-    
-    return "localhost";
 }
 
 void Config::loadEnv() {
@@ -45,6 +46,7 @@ void Config::loadEnv() {
     env_vars.db_url = dotenv::getenv("DB_URL", "");
     env_vars.wuz_token = dotenv::getenv("WUZ_TOKEN", "");
     env_vars.callback_url = dotenv::getenv("CALLBACK_URL", "");
+    env_vars.db_url_wuz = dotenv::getenv("DB_URL_WUZ", "");
 
     if (env_vars.callback_url.empty()) {
         std::string ip_to_use;

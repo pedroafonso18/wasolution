@@ -24,4 +24,5 @@ public:
     Status insertLog(const std::string& log_level, const std::string& log_text) const;
     Status deleteInstance(const std::string& instance_id);
     //TODO: Adicionar função para mudar o is_active para true e false.
+    Status createInstance_w(std::string inst_token, std::string inst_name);
 };

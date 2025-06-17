@@ -23,8 +23,8 @@ Status Database::connect(const std::string& db_url) {
 }
 
 std::optional<Database::Instance> Database::fetchInstance(const std::string& instance_id) const {
-    Instance inst;
     try {
+        Instance inst;
         if (!c || !c->is_open()) {
             std::cerr << "DB connection is not open, returning nullopt...\n";
             return std::nullopt;
@@ -154,6 +154,38 @@ Status Database::deleteInstance(const std::string &instance_id) {
         }
         stat.status_code = c_status::OK;
         stat.status_string = "Successfully deleted the instance from the db!\n";
+        return stat;
+
+    } catch (const std::exception& e) {
+        stat.status_string = e.what();
+        stat.status_code = c_status::ERR;
+        return stat;
+    }
+}
+
+Status Database::createInstance_w(std::string inst_token, std::string inst_name) {
+    Status stat;
+    try {
+        if (!c || !c->is_open()) {
+            stat.status_string = "DB connection is not open, returning error...\n";
+            stat.status_code = c_status::ERR;
+            return stat;
+        }
+
+        pqxx::work wrk(*c);
+        pqxx::result res = wrk.exec(
+            "INSERT INTO users (name, token) VALUES (" +
+            wrk.quote(inst_name) + ", " +
+            wrk.quote(inst_token) + ") RETURNING id"
+        );
+        wrk.commit();
+        if (res.empty()) {
+            stat.status_string = "Couldn't insert the instance into the db...\n";
+            stat.status_code = c_status::ERR;
+            return stat;
+        }
+        stat.status_code = c_status::OK;
+        stat.status_string = "Successfully inserted instance into the db!\n";
         return stat;
 
     } catch (const std::exception& e) {
