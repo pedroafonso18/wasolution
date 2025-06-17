@@ -203,7 +203,7 @@ Status Handler::deleteInstance(string instance_id) {
             return connection;
         }
 
-        if (auto del = db.deleteInstance_w(instance_id); del.status_code == c_status::ERR) {
+        if (auto del = db_wuz.deleteInstance_w(instance_id); del.status_code == c_status::ERR) {
             return del;
         }
         return response;
