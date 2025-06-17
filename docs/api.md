@@ -225,7 +225,43 @@ Desconecta uma instância sem excluí-la.
 - 400 Bad Request: Parâmetros inválidos ou ausentes
 - 500 Internal Server Error: Erro ao processar a requisição
 
-### 6. Webhook
+### 6. Configurar Webhook
+
+Configura ou atualiza a URL do webhook para uma instância existente.
+
+**Endpoint:** `/setWebhook`  
+**Método:** POST  
+**Content-Type:** application/json
+
+**Parâmetros de Requisição:**
+
+| Campo | Tipo | Obrigatório | Descrição |
+|-------|------|-------------|-----------|
+| instance_id | String | Sim | Identificador da instância a ser configurada |
+| webhook_url | String | Sim | Nova URL do webhook para receber notificações |
+
+**Exemplo de Requisição:**
+```json
+{
+    "instance_id": "instance001",
+    "webhook_url": "https://seu-servidor.com/novo-webhook"
+}
+```
+
+**Exemplo de Resposta de Sucesso:**
+```json
+{
+    "status_code": 0,
+    "status_string": "Webhook configurado com sucesso"
+}
+```
+
+**Códigos de Status HTTP:**
+- 200 OK: Requisição processada com sucesso
+- 400 Bad Request: Parâmetros inválidos ou ausentes
+- 500 Internal Server Error: Erro ao processar a requisição
+
+### 7. Webhook
 
 Endpoint para processar notificações recebidas de uma instância.
 

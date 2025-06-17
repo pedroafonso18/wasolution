@@ -22,8 +22,11 @@ Status Handler::sendMessage(const string &instance_id, string number, string bod
         stat.status_string = nlohmann::json{{"error", "Couldn't find any connections with this name."}};
         return stat;
     }
+    Status snd;
+
     if (inst.value().instance_type == "EVOLUTION") {
-        if (auto snd = Evolution::sendMessage_e(number, env.evo_token, env.evo_url, type, body, instance_name); snd.status_code == c_status::ERR) {
+        snd = Evolution::sendMessage_e(number, env.evo_token, env.evo_url, type, body, instance_name);
+        if (snd.status_code == c_status::ERR) {
             return snd;
         } else {
             stat.status_code = c_status::OK;
@@ -38,7 +41,8 @@ Status Handler::sendMessage(const string &instance_id, string number, string bod
             return stat;
         }
     } else if (inst.value().instance_type == "WUZAPI") {
-        if (auto snd = Wuzapi::sendMessage_w(number, inst.value().instance_id, env.wuz_url, type, body); snd.status_code == c_status::ERR) {
+        snd = Wuzapi::sendMessage_w(number, inst.value().instance_id, env.wuz_url, type, body);
+        if (snd.status_code == c_status::ERR) {
             return snd;
         } else {
             stat.status_code = c_status::OK;
@@ -318,6 +322,58 @@ Status Handler::logoutInstance(string instance_id) {
                 response.status_string = nlohmann::json{
                     {"message", "Instance deleted successfully!"},
                     {"api_response", response.status_string}
+                };
+            }
+        }
+        return response;
+    }
+    stat.status_code = c_status::ERR;
+    stat.status_string = nlohmann::json{{"error", "Instance type is not valid."}};
+    return stat;
+}
+
+Status Handler::setWebhook(string token, string webhook_url) {
+    Config config;
+    Database db;
+    Status stat;
+
+    auto env = config.getEnv();
+    if (auto connection = db.connect(env.db_url); connection.status_code == c_status::ERR) {
+        return connection;
+    }
+
+    auto instance = db.fetchInstance(token);
+    if (!instance.has_value()) {
+        stat.status_code = c_status::ERR;
+        stat.status_string = nlohmann::json{{"error", "Couldn't get the instance from the db."}};
+        return stat;
+    }
+    if (instance.value().instance_type == "WUZAPI") {
+        Status response = Wuzapi::setWebhook_w(token, webhook_url, env.wuz_url);
+        try {
+            if (response.status_code == c_status::OK) {
+                response.status_string = nlohmann::json::parse(response.status_string.dump());
+            }
+        } catch (const std::exception& e) {
+            if (response.status_code == c_status::OK) {
+                response.status_string = nlohmann::json{
+                        {"message", "Instance deleted successfully!"},
+                        {"api_response", response.status_string}
+                };
+            }
+        }
+        return response;
+    } else if (instance.value().instance_type == "EVOLUTION") {
+        Status response = Evolution::setWebhook_e(instance.value().instance_name, webhook_url, env.evo_url, env.evo_token);
+        try {
+            if (response.status_code == c_status::OK) {
+                response.status_string = nlohmann::json::parse(response.status_string.dump());
+            }
+        } catch (const std::exception& e) {
+            if (response.status_code == c_status::OK) {
+                response.status_string = nlohmann::json{
+                        {"message", "Instance deleted successfully!"},
+                        {"api_response", response.status_string}
                 };
             }
         }

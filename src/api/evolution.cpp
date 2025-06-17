@@ -334,3 +334,61 @@ Status Evolution::logoutInstance_e(const string& inst_token, const string& evo_u
 
     return stat;
 }
+
+Status Evolution::setWebhook_e(string token, string webhook_url, string url, string evo_token) {
+    CURL *curl = curl_easy_init();
+    std::string responseBody;
+    Status stat;
+
+    if (!curl) {
+        stat.status_code = c_status::ERR;
+        stat.status_string = nlohmann::json{{"error", "Failed to initialize CURL"}};
+        std::cout << "WEBHOOK-ERROR: CURL NOT INITIALIZED\n";
+        return stat;
+    }
+
+    const string req_url = std::format("{}/instance/webhook/{}", url, token);
+    string req_body = std::format(R"({{"enabled": true, "url": "{}", "webhookByEvents": true, "webhookBase64": true, "events": ["APPLICATION_STARTUP"]}})", webhook_url);
+    std::cout << "BODY and URL constructed successfully!\n";
+    std::cout << "BODY: " << req_body << '\n';
+    std::cout << "URL: " << req_url << '\n';
+
+    struct curl_slist *headers = nullptr;
+    const string authorization = std::format("apikey: {}", evo_token);
+    headers = curl_slist_append(headers, authorization.c_str());
+    headers = curl_slist_append(headers, "Content-Type: application/json");
+    headers = curl_slist_append(headers, "accept: application/json");
+
+    curl_easy_setopt(curl, CURLOPT_URL, req_url.c_str());
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+    curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "POST");
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, req_body.c_str());
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &responseBody);
+
+    if (const CURLcode res = curl_easy_perform(curl); res != CURLE_OK) {
+        std::cerr << "CURL error: " <<  curl_easy_strerror(res) << '\n';
+        curl_slist_free_all(headers);
+        curl_easy_cleanup(curl);
+        stat.status_code = c_status::ERR;
+        stat.status_string = nlohmann::json{{"error", curl_easy_strerror(res)}};
+        std::cout << stat.status_string << '\n';
+
+        return stat;
+    }
+
+    curl_slist_free_all(headers);
+    curl_easy_cleanup(curl);
+    stat.status_code = c_status::OK;
+
+    try {
+        stat.status_string = nlohmann::json::parse(responseBody);
+    } catch (const std::exception& e) {
+        stat.status_string = nlohmann::json{
+            {"raw_response", responseBody}
+        };
+    }
+    std::cout << stat.status_string << '\n';
+
+    return stat;
+}

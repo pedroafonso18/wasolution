@@ -19,7 +19,7 @@ Status Wuzapi::setProxy_w(string token, string proxy_url, string url) {
     }
 
     const string req_url = std::format("{}/proxy", url);
-    string req_hdr = std::format("token : {}", token);
+    string req_hdr = std::format("token: {}", token);
     string req_body = std::format(R"({{"proxy_url": "{}", "enable": true}})", proxy_url);
     std::cout << "BODY and URL constructed successfully!\n";
     std::cout << "BODY: " << req_body << '\n';
@@ -189,12 +189,13 @@ Status Wuzapi::setWebhook_w(string token, string webhook_url, string url) {
     if (!curl) {
         stat.status_code = c_status::ERR;
         stat.status_string = nlohmann::json{{"error", "Failed to initialize CURL"}};
+        std::cout << "WEBHOOK-ERROR: CURL NOT INITIALIZED\n";
         return stat;
     }
 
     const string req_url = std::format("{}/webhook", url);
-    string req_hdr = std::format("token : {}", token);
-    string req_body = std::format(R"({{"webhook": "{}", "data": "["Message", "ReadReceipt"]"}})", webhook_url);
+    string req_hdr = std::format("token: {}", token);
+    string req_body = std::format(R"({{"webhook": "{}", "data": ["Message", "ReadReceipt"]}})", webhook_url);
     std::cout << "BODY and URL constructed successfully!\n";
     std::cout << "BODY: " << req_body << '\n';
     std::cout << "URL: " << req_url << '\n';
@@ -217,6 +218,8 @@ Status Wuzapi::setWebhook_w(string token, string webhook_url, string url) {
         curl_easy_cleanup(curl);
         stat.status_code = c_status::ERR;
         stat.status_string = nlohmann::json{{"error", curl_easy_strerror(res)}};
+        std::cout << stat.status_string << '\n';
+
         return stat;
     }
 
@@ -231,6 +234,7 @@ Status Wuzapi::setWebhook_w(string token, string webhook_url, string url) {
                     {"raw_response", responseBody}
         };
     }
+    std::cout << stat.status_string << '\n';
 
     return stat;
 }
@@ -317,15 +321,6 @@ Status Wuzapi::createInstance_w(string inst_token, string url, string webhook_ur
             return stat;
         }
     }
-
-    if (!proxy_url.empty()) {
-        stat = setProxy_w(inst_token, proxy_url, url);
-        if (stat.status_code == c_status::ERR) {
-            return stat;
-        }
-    }
-
-
 
     if (auto conn = connectInstance_w(inst_token, url); conn.status_code == c_status::ERR) {
         return conn;

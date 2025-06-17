@@ -179,8 +179,7 @@ http::response<http::string_body> handle_request(http::request<http::string_body
         }
         res.prepare_payload();
         return res;
-    } if (req.method() == http::verb::post && req.target() == "/webhook") {
-
+    } if (req.method() == http::verb::post && req.target() == "/setWebhook") {
         http::response<http::string_body> res{http::status::ok, req.version()};
         res.set(http::field::server, "Beast");
         res.set(http::field::content_type, "application/json");
@@ -188,6 +187,59 @@ http::response<http::string_body> handle_request(http::request<http::string_body
         try {
             auto body = nlohmann::json::parse(req.body());
             std::string instance_id = body.at("instance_id").get<std::string>();
+            std::string webhook_url = body.at("webhook_url").get<std::string>();
+            Status stat = Handler::setWebhook(instance_id,webhook_url);
+            nlohmann::json resp_json;
+            resp_json["status_code"] = stat.status_code;
+            resp_json["status_string"] = stat.status_string;
+            res.body() = resp_json.dump();
+
+            if (stat.status_code == c_status::ERR) {
+                res.result(http::status::internal_server_error);
+            }
+        } catch (const std::exception& e) {
+            res.result(http::status::bad_request);
+            nlohmann::json err_json;
+            err_json["error"] = e.what();
+            res.body() = err_json.dump();
+        }
+        res.prepare_payload();
+        return res;
+        } if (req.method() == http::verb::post && req.target() == "/webhook") {
+
+        http::response<http::string_body> res{http::status::ok, req.version()};
+        res.set(http::field::server, "Beast");
+        res.set(http::field::content_type, "application/json");
+        res.keep_alive(req.keep_alive());
+
+        try {
+            auto body = nlohmann::json::parse(req.body());
+            std::string instance_id;
+
+            if (body.contains("event") && body.contains("instance") && body.contains("data")) {
+                if (body["data"].contains("instanceId")) {
+                    instance_id = body["data"]["instanceId"];
+                } else if (body.contains("instance")) {
+                    instance_id = body["instance"];
+                } else {
+                    res.result(http::status::bad_request);
+                    res.body() = R"({"error":"Webhook da Evolution sem instanceId válido"})";
+                    res.prepare_payload();
+                    return res;
+                }
+            } else if (body.contains("type") && body.contains("token") && body.contains("instance_name")) {
+                instance_id = body["token"];
+            } else if (body.contains("instance_id")) {
+                instance_id = body.at("instance_id").get<std::string>();
+            } else {
+                res.result(http::status::bad_request);
+                res.body() = R"({"error":"Formato de webhook desconhecido"})";
+                res.prepare_payload();
+                return res;
+            }
+
+            std::cerr << "Webhook recebido para instance_id: " << instance_id << std::endl;
+
             Status stat = Handler::sendWebhook(body, instance_id);
             nlohmann::json resp_json;
             resp_json["status_code"] = stat.status_code;
@@ -202,6 +254,8 @@ http::response<http::string_body> handle_request(http::request<http::string_body
             nlohmann::json err_json;
             err_json["error"] = e.what();
             res.body() = err_json.dump();
+
+            std::cerr << "Erro ao processar webhook: " << e.what() << std::endl;
         }
         res.prepare_payload();
         return res;

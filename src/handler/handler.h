@@ -21,4 +21,6 @@ class Handler {
         static Status connectInstance(string instance_id);
         static Status logoutInstance(string instance_id);
         static Status sendWebhook(nlohmann::json webhook, string inst_id);
+        static Status setWebhook(string token, string webhook_url);
+
 };
