@@ -162,7 +162,7 @@ Envia uma mensagem para um contato específico.
 Remove uma instância existente.
 
 **Endpoint:** `/deleteInstance`  
-**Método:** POST  
+**Método:** DELETE  
 **Content-Type:** application/json
 
 **Parâmetros de Requisição:**
@@ -191,7 +191,41 @@ Remove uma instância existente.
 - 400 Bad Request: Parâmetros inválidos ou ausentes
 - 500 Internal Server Error: Erro ao processar a requisição
 
-### 5. Webhook
+### 5. Desconectar Instância
+
+Desconecta uma instância sem excluí-la.
+
+**Endpoint:** `/logoutInstance`  
+**Método:** DELETE  
+**Content-Type:** application/json
+
+**Parâmetros de Requisição:**
+
+| Campo | Tipo | Obrigatório | Descrição |
+|-------|------|-------------|-----------|
+| instance_id | String | Sim | Identificador da instância a ser desconectada |
+
+**Exemplo de Requisição:**
+```json
+{
+    "instance_id": "instance001"
+}
+```
+
+**Exemplo de Resposta de Sucesso:**
+```json
+{
+    "status_code": 0,
+    "status_string": "Instância desconectada com sucesso"
+}
+```
+
+**Códigos de Status HTTP:**
+- 200 OK: Requisição processada com sucesso
+- 400 Bad Request: Parâmetros inválidos ou ausentes
+- 500 Internal Server Error: Erro ao processar a requisição
+
+### 6. Webhook
 
 Endpoint para processar notificações recebidas de uma instância.
 
@@ -248,4 +282,8 @@ Todas as solicitações são validadas e os erros tratados adequadamente. Possí
 - Falha na conexão com a API
 - Erro ao processar a mensagem
 
-Em caso de erro, a resposta incluirá um código de status HTTP apropriado e um corpo JSON com detalhes do erro.
+## Tratamento Automático de Webhooks
+
+O sistema inclui suporte básico para tratamento automático de webhooks, permitindo o encaminhamento de eventos recebidos das APIs para URLs configuradas pelo usuário. Ao criar uma instância com um `webhook_url`, os eventos de mensagens e status serão automaticamente encaminhados para esta URL.
+
+O formato dos webhooks encaminhados segue o padrão da API utilizada (EVOLUTION ou WUZAPI), permitindo uma integração transparente com sistemas existentes.

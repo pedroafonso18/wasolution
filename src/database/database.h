@@ -23,4 +23,5 @@ public:
     Status insertInstance(const std::string& instance_id, const std::string& instance_name, const ApiType& instance_type, std::optional<std::string> webhook_url);
     Status insertLog(const std::string& log_level, const std::string& log_text) const;
     Status deleteInstance(const std::string& instance_id);
+    //TODO: Adicionar função para mudar o is_active para true e false.
 };

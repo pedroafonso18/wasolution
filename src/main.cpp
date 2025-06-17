@@ -102,7 +102,7 @@ http::response<http::string_body> handle_request(http::request<http::string_body
         res.prepare_payload();
         return res;
     }
-    if (req.method() == http::verb::post && req.target() == "/deleteInstance") {
+    if (req.method() == http::verb::delete_ && req.target() == "/deleteInstance") {
         http::response<http::string_body> res{http::status::ok, req.version()};
         res.set(http::field::server, "Beast");
         res.set(http::field::content_type, "application/json");
@@ -128,7 +128,7 @@ http::response<http::string_body> handle_request(http::request<http::string_body
         res.prepare_payload();
         return res;
     }
-    if (req.method() == http::verb::post && req.target() == "/logoutInstance") {
+    if (req.method() == http::verb::delete_ && req.target() == "/logoutInstance") {
         http::response<http::string_body> res{http::status::ok, req.version()};
         res.set(http::field::server, "Beast");
         res.set(http::field::content_type, "application/json");
