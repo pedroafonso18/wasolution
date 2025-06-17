@@ -133,8 +133,8 @@ Status Wuzapi::sendMessage_w(string phone, string token, string url, MediaType t
         req_url = std::format("{}/chat/send/audio", url);
         req_body = std::format(R"({{"Phone": "{}", "Audio": "{}"}})", phone, msg_template);
     } else if (type == MediaType::IMAGE) {
-        req_url = std::format("{}/chat/send/sticker", url);
-        req_body = std::format(R"({{"Phone": "{}", "Sticker": "{}"}})", phone, msg_template);
+        req_url = std::format("{}/chat/send/image", url);
+        req_body = std::format(R"({{"Phone": "{}", "Image": "{}", "Caption" : ""}})", phone, msg_template);
     }
 
     std::cout << "BODY and URL constructed successfully!\n";

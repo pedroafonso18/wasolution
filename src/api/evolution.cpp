@@ -70,8 +70,8 @@ Status Evolution::sendMessage_e(string phone, string token, string url, MediaTyp
         req_url = std::format("{}/message/sendWhatsappAudio/{}", url, instance_name);
         req_body = std::format(R"({{"number" : "{}", "audio" : "{}", "delay": 100}})", phone, msg_template);
     } else if (type == MediaType::IMAGE) {
-        req_url = std::format("{}/message/sendSticker/{}", url, instance_name);
-        req_body = std::format(R"({{"number" : "{}", "sticker" : "{}"}})", phone, msg_template);
+        req_url = std::format("{}/message/sendMedia/{}", url, instance_name);
+        req_body = std::format(R"({{"number" : "{}", "media" : "{}", "mediatype" : "image", "mimetype" : "image/png", "caption": "", "fileName" : "imagem.png"}})", phone, msg_template);
     }
     std::cout << "BODY and URL constructed successfully!\n";
     std::cout << "BODY: " << req_body << '\n';
