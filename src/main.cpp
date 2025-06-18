@@ -17,7 +17,7 @@ namespace http = beast::http;
 namespace net = boost::asio;
 using tcp = net::ip::tcp;
 
-Logger apiLogger("logs/api.log");
+Logger apiLogger("../logs/api.log");
 
 http::response<http::string_body> handle_request(http::request<http::string_body> const& req) {
     apiLogger.info("Requisição recebida: " + std::string(req.method_string()) + " " + std::string(req.target()));

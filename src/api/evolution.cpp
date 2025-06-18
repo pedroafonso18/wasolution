@@ -3,7 +3,7 @@
 #include "config/config.h"
 using std::string;
 
-Logger apiLogger("logs/api.log");
+extern Logger apiLogger;
 
 Evolution::Proxy Evolution::ParseProxy(std::string proxy_url) {
     apiLogger.debug("Analisando URL do proxy: " + proxy_url);
@@ -317,7 +317,7 @@ Status Evolution::deleteInstance_e(string inst_token, string evo_token, string u
     return stat;
 }
 
-Status Evolution::connectInstance_e(string inst_token, string evo_token, string url) {
+Status Evolution::connectInstance_e(const string& inst_token, const string& evo_url, const string& evo_token) {
     apiLogger.info("Conectando instância Evolution");
     CURL *curl = curl_easy_init();
     std::string responseBody;
@@ -328,7 +328,7 @@ Status Evolution::connectInstance_e(string inst_token, string evo_token, string 
         stat.status_string = nlohmann::json{{"error", "Failed to initialize CURL"}};
         return stat;
     }
-    const string req_url = std::format("{}/instance/connect/{}", url, inst_token);
+    const string req_url = std::format("{}/instance/connect/{}", evo_url, inst_token);
     apiLogger.debug("URL da requisição: " + req_url);
 
     struct curl_slist *headers = nullptr;
@@ -547,17 +547,4 @@ Status Evolution::setWebhook_e(string token, string webhook_url, string url, str
     std::cout << stat.status_string << '\n';
 
     return stat;
-}
-
-bool Evolution::isHttpResponseOk(CURL* curl) {
-    long http_code = 0;
-    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
-    apiLogger.debug("Código de resposta HTTP: " + std::to_string(http_code));
-    return http_code >= 200 && http_code < 300;
-}
-
-size_t Evolution::WriteCallback(void* contents, size_t size, size_t nmemb, std::string* userp) {
-    size_t realsize = size * nmemb;
-    userp->append((char*)contents, realsize);
-    return realsize;
 }

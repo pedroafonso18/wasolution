@@ -6,7 +6,7 @@
 #include "database/database.h"
 using std::string;
 
-Logger apiLogger("logs/api.log");
+extern Logger apiLogger;
 
 Status Wuzapi::setProxy_w(string token, string proxy_url, string url) {
     apiLogger.info("Configurando proxy para instância: " + token);

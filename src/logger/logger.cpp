@@ -1,5 +1,5 @@
 #include "logger.h"
-#include "spdlog/spdlog-inl.h"
+#include "spdlog/spdlog.h"
 
 Logger::Logger(const std::string& file) : filepath_(file) {
     setup_logger();

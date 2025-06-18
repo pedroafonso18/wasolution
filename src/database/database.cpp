@@ -2,7 +2,7 @@
 #include "logger/logger.h"
 #include <sstream>
 
-Logger apiLogger("logs/api.log");
+extern Logger apiLogger;
 
 Status Database::connect(const std::string& db_url) {
     apiLogger.debug("Tentando conectar ao banco de dados");

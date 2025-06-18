@@ -3,7 +3,7 @@
 
 using std::string;
 
-Logger apiLogger("logs/api.log");
+extern Logger apiLogger;
 
 Status Handler::sendMessage(const string &instance_id, string number, string body, MediaType type) {
     apiLogger.info("Iniciando envio de mensagem para instância: " + instance_id);
