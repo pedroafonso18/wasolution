@@ -391,7 +391,7 @@ Status Wuzapi::sendMessage_w(string phone, string token, string url, MediaType t
     return stat;
 }
 
-Status Wuzapi::createInstance_w(string inst_token, string url, string webhook_url, string proxy_url, string wuz_admin_token) {
+Status Wuzapi::createInstance_w(string inst_token, string inst_name, string url, string webhook_url, string proxy_url, string wuz_admin_token) {
     Status stat;
     Config cfg;
     Env env = cfg.getEnv();
@@ -406,8 +406,28 @@ Status Wuzapi::createInstance_w(string inst_token, string url, string webhook_ur
 
     const string req_url = std::format("{}/admin/users", url);
 
-    std::cout << "URL constructed successfully!\n";
-    std::cout << "URL: " << req_url << '\n';
+    nlohmann::json req_body_json;
+
+    req_body_json["name"] = inst_name;
+    req_body_json["token"] = inst_token;
+
+    if (!webhook_url.empty()) {
+        req_body_json["webhook"] = webhook_url;
+        req_body_json["events"] = "All";
+    }
+
+    if (!proxy_url.empty()) {
+        req_body_json["proxyConfig"] = {
+            {"enabled", true},
+            {"proxyURL", proxy_url}
+        };
+    }
+
+    string req_body = req_body_json.dump();
+
+    apiLogger.debug("Creating WuzAPI instance");
+    apiLogger.debug("URL: " + req_url);
+    apiLogger.debug("Request body: " + req_body);
 
     struct curl_slist *headers = nullptr;
     const string authorization = std::format("Authorization: {}", wuz_admin_token);
@@ -419,11 +439,12 @@ Status Wuzapi::createInstance_w(string inst_token, string url, string webhook_ur
     curl_easy_setopt(curl, CURLOPT_URL, req_url.c_str());
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
     curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "POST");
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, req_body.c_str());
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &responseBody);
 
     if (const CURLcode res = curl_easy_perform(curl); res != CURLE_OK) {
-        std::cerr << "CURL error: " <<  curl_easy_strerror(res) << '\n';
+        apiLogger.error("CURL error: " + std::string(curl_easy_strerror(res)));
         curl_slist_free_all(headers);
         curl_easy_cleanup(curl);
         stat.status_code = c_status::ERR;
@@ -431,36 +452,41 @@ Status Wuzapi::createInstance_w(string inst_token, string url, string webhook_ur
         return stat;
     }
 
+    bool http_ok = isHttpResponseOk(curl);
+    apiLogger.debug("HTTP Response: " + responseBody);
+
     curl_slist_free_all(headers);
     curl_easy_cleanup(curl);
-    stat.status_code = c_status::OK;
 
     try {
-        stat.status_string = nlohmann::json::parse(responseBody);
+        nlohmann::json response = nlohmann::json::parse(responseBody);
+
+        if (!http_ok) {
+            apiLogger.error("HTTP error when creating WuzAPI instance");
+            stat.status_code = c_status::ERR;
+            stat.status_string = response;
+            if (!response.contains("error")) {
+                response["error"] = "Server returned HTTP error code";
+                stat.status_string = response;
+            }
+            return stat;
+        }
+
+        stat.status_code = c_status::OK;
+        stat.status_string = response;
     } catch (const std::exception& e) {
-        stat.status_string = nlohmann::json{
-                    {"raw_response", responseBody}
-        };
-    }
-
-
-    if (!proxy_url.empty()) {
-        stat = setProxy_w(inst_token, proxy_url, url);
-        if (stat.status_code == c_status::ERR) {
-            return stat;
-        }
-    }
-
-    if (!webhook_url.empty()) {
-        Database db;
-        stat = setWebhook_w(inst_token, webhook_url, url);
-        if (stat.status_code == c_status::ERR) {
-            return stat;
-        }
-        if (auto connection = db.connect(env.db_url_wuz); connection.status_code == c_status::ERR) {
-            std::cout << "ERROR: Erro quando conectando no banco de dados, continuando...\n";
+        apiLogger.error("Error parsing response: " + std::string(e.what()));
+        if (!http_ok) {
+            stat.status_code = c_status::ERR;
+            stat.status_string = nlohmann::json{
+                {"error", "Error on remote server"},
+                {"raw_response", responseBody}
+            };
         } else {
-            db.insertWebhook_w(inst_token, webhook_url);
+            stat.status_code = c_status::OK;
+            stat.status_string = nlohmann::json{
+                {"raw_response", responseBody}
+            };
         }
     }
 

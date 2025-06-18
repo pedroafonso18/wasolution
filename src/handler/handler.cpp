@@ -90,16 +90,7 @@ Status Handler::createInstance(const string &instance_id, const string &instance
         api_response = Evolution::createInstance_e(env.evo_token, instance_id, instance_name, env.evo_url, web_url, proxy_url);
     } else if (api_type == ApiType::WUZAPI) {
         apiLogger.info("Criando instância WuzAPI");
-        Database db_wuz;
-        if (auto connection_wuz = db.connect(env.db_url_wuz); connection_wuz.status_code == c_status::ERR) {
-            apiLogger.error("Erro ao conectar ao banco WuzAPI: " + connection_wuz.status_string.dump());
-            return connection_wuz;
-        }
-        if (auto insert_into_wuz = db.createInstance_w(instance_id, instance_name); insert_into_wuz.status_code == c_status::ERR) {
-            apiLogger.error("Erro ao inserir instância no banco WuzAPI: " + insert_into_wuz.status_string.dump());
-            return insert_into_wuz;
-        };
-        api_response = Wuzapi::createInstance_w(instance_id, env.wuz_url, web_url, proxy_url, env.wuz_admin_token);
+        api_response = Wuzapi::createInstance_w(instance_id, instance_name, env.wuz_url, web_url, proxy_url, env.wuz_admin_token);
     } else {
         apiLogger.error("Tipo de API desconhecido");
         stat.status_code = c_status::ERR;

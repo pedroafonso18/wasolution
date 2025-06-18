@@ -165,11 +165,11 @@ Status Evolution::createInstance_e(string evo_token, string inst_token, string i
     string req_body;
     const string req_url = std::format("{}/instance/create", url);
     if (!prox.host.empty() && !webhook_url.empty()) {
-        req_body = std::format(R"({{"instanceName" : "{}","token" : "{}", "integration": "WHATSAPP-BAILEYS", "qrcode" : true, "webhookUrl" : "{}", "events" : ["MESSAGES_UPSERT"], "proxyHost": "{}", "proxyPort": "{}", "proxyProtocol" : "{}",  "proxyUsername" : "{}", "proxyPassword" : "{}"}})", inst_name, inst_token, webhook_url, prox.host, prox.port, prox.protocol, prox.username, prox.password);
+        req_body = std::format(R"({{"instanceName" : "{}","token" : "{}", "integration": "WHATSAPP-BAILEYS", "qrcode" : true, "webhook": {{"url": "{}", "byEvents": false, "base64": true, "events": ["MESSAGES_UPSERT"]}}, "proxyHost": "{}", "proxyPort": "{}", "proxyProtocol" : "{}",  "proxyUsername" : "{}", "proxyPassword" : "{}"}})", inst_name, inst_token, webhook_url, prox.host, prox.port, prox.protocol, prox.username, prox.password);
     } else if (!prox.host.empty() && webhook_url.empty()) {
         req_body = std::format(R"({{"instanceName" : "{}","token" : "{}", "integration": "WHATSAPP-BAILEYS", "qrcode" : true, "proxyHost": "{}", "proxyPort": "{}", "proxyProtocol" : "{}",  "proxyUsername" : "{}", "proxyPassword" : "{}"}})", inst_name, inst_token,prox.host, prox.port, prox.protocol, prox.username, prox.password);
     } else if (prox.host.empty() && !webhook_url.empty()) {
-        req_body = std::format(R"({{"instanceName" : "{}","token" : "{}", "integration": "WHATSAPP-BAILEYS", "qrcode" : true, "webhookUrl" : "{}", "events" : ["MESSAGES_UPSERT"]}})", inst_name, inst_token, webhook_url);
+        req_body = std::format(R"({{"instanceName" : "{}","token" : "{}", "integration": "WHATSAPP-BAILEYS", "qrcode" : true, "webhook": {{"url": "{}", "byEvents": false, "base64": true, "events": ["MESSAGES_UPSERT"]}}}})", inst_name, inst_token, webhook_url);
     } else if (prox.host.empty() && webhook_url.empty()) {
         req_body = std::format(R"({{"instanceName" : "{}","token" : "{}", "integration": "WHATSAPP-BAILEYS"}})", inst_name, inst_token);
     }
@@ -251,7 +251,7 @@ Status Evolution::deleteInstance_e(string inst_token, string evo_token, string u
         stat.status_string = nlohmann::json{{"error", "Failed to initialize CURL"}};
         return stat;
     }
-    const string req_url = std::format("{}/instance/logout/{}", url, inst_token);
+    const string req_url = std::format("{}/instance/delete/{}", url, inst_token);
     apiLogger.debug("URL da requisição: " + req_url);
 
     struct curl_slist *headers = nullptr;
@@ -480,7 +480,7 @@ Status Evolution::setWebhook_e(string token, string webhook_url, string url, str
         return stat;
     }
 
-    const string req_url = std::format("{}/instance/webhook/{}", url, token);
+    const string req_url = std::format("{}/webhook/set/{}", url, token);
     string req_body = std::format(R"({{"enabled": true, "url": "{}", "webhookByEvents": true, "webhookBase64": true, "events": ["APPLICATION_STARTUP"]}})", webhook_url);
     std::cout << "BODY and URL constructed successfully!\n";
     std::cout << "BODY: " << req_body << '\n';
