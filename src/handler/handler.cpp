@@ -99,7 +99,7 @@ Status Handler::createInstance(const string &instance_id, const string &instance
             apiLogger.error("Erro ao inserir instância no banco WuzAPI: " + insert_into_wuz.status_string.dump());
             return insert_into_wuz;
         };
-        api_response = Wuzapi::createInstance_w(instance_id, env.wuz_url, web_url, proxy_url);
+        api_response = Wuzapi::createInstance_w(instance_id, env.wuz_url, web_url, proxy_url, env.wuz_admin_token);
     } else {
         apiLogger.error("Tipo de API desconhecido");
         stat.status_code = c_status::ERR;
@@ -217,15 +217,21 @@ Status Handler::deleteInstance(string instance_id) {
     }
 
     if (instance.value().instance_type == "WUZAPI") {
-        apiLogger.info("Excluindo instância WuzAPI");
-        Database db_wuz;
-
-        if (auto connection = db_wuz.connect(env.db_url_wuz); connection.status_code == c_status::ERR) {
-            apiLogger.error("Erro ao conectar ao banco WuzAPI: " + connection.status_string.dump());
-            return connection;
+        apiLogger.info("Excluindo instância WUZAPI");
+        Status response = Wuzapi::deleteInstance_w(instance_id,env.wuz_url, env.wuz_admin_token);
+        try {
+            if (response.status_code == c_status::OK) {
+                response.status_string = nlohmann::json::parse(response.status_string.dump());
+            }
+        } catch (const std::exception& e) {
+            if (response.status_code == c_status::OK) {
+                response.status_string = nlohmann::json{
+                        {"message", "Instance deleted successfully!"},
+                        {"api_response", response.status_string}
+                };
+            }
         }
-        auto del = db_wuz.deleteInstance_w(instance_id);
-        return del;
+        return response;
 
     } else if (instance.value().instance_type == "EVOLUTION") {
         apiLogger.info("Excluindo instância Evolution");

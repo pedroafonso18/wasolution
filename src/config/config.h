@@ -11,6 +11,7 @@ typedef struct {
     std::string db_url_wuz;
     std::string default_webhook;
     std::string ip_address;
+    std::string wuz_admin_token;
 } Env;
 
 class Config{

@@ -391,11 +391,59 @@ Status Wuzapi::sendMessage_w(string phone, string token, string url, MediaType t
     return stat;
 }
 
-Status Wuzapi::createInstance_w(string inst_token, string url, string webhook_url, string proxy_url) {
+Status Wuzapi::createInstance_w(string inst_token, string url, string webhook_url, string proxy_url, string wuz_admin_token) {
     Status stat;
     Config cfg;
     Env env = cfg.getEnv();
-    Database db;
+    CURL *curl = curl_easy_init();
+    std::string responseBody;
+
+    if (!curl) {
+        stat.status_code = c_status::ERR;
+        stat.status_string = nlohmann::json{{"error", "Failed to initialize CURL"}};
+        return stat;
+    }
+
+    const string req_url = std::format("{}/admin/users", url);
+
+    std::cout << "URL constructed successfully!\n";
+    std::cout << "URL: " << req_url << '\n';
+
+    struct curl_slist *headers = nullptr;
+    const string authorization = std::format("Authorization: {}", wuz_admin_token);
+
+    headers = curl_slist_append(headers, authorization.c_str());
+    headers = curl_slist_append(headers, "Content-Type: application/json");
+    headers = curl_slist_append(headers, "accept: application/json");
+
+    curl_easy_setopt(curl, CURLOPT_URL, req_url.c_str());
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+    curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "POST");
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &responseBody);
+
+    if (const CURLcode res = curl_easy_perform(curl); res != CURLE_OK) {
+        std::cerr << "CURL error: " <<  curl_easy_strerror(res) << '\n';
+        curl_slist_free_all(headers);
+        curl_easy_cleanup(curl);
+        stat.status_code = c_status::ERR;
+        stat.status_string = nlohmann::json{{"error", curl_easy_strerror(res)}};
+        return stat;
+    }
+
+    curl_slist_free_all(headers);
+    curl_easy_cleanup(curl);
+    stat.status_code = c_status::OK;
+
+    try {
+        stat.status_string = nlohmann::json::parse(responseBody);
+    } catch (const std::exception& e) {
+        stat.status_string = nlohmann::json{
+                    {"raw_response", responseBody}
+        };
+    }
+
+
     if (!proxy_url.empty()) {
         stat = setProxy_w(inst_token, proxy_url, url);
         if (stat.status_code == c_status::ERR) {
@@ -404,6 +452,7 @@ Status Wuzapi::createInstance_w(string inst_token, string url, string webhook_ur
     }
 
     if (!webhook_url.empty()) {
+        Database db;
         stat = setWebhook_w(inst_token, webhook_url, url);
         if (stat.status_code == c_status::ERR) {
             return stat;
@@ -547,6 +596,59 @@ Status Wuzapi::logoutInstance_w(string inst_token, string url) {
     } catch (const std::exception& e) {
         stat.status_string = nlohmann::json{
             {"raw_response", responseBody}
+        };
+    }
+
+    return stat;
+}
+
+Status Wuzapi::deleteInstance_w(string inst_token, string url, string wuz_admin_token) {
+    CURL *curl = curl_easy_init();
+    std::string responseBody;
+    Status stat;
+
+    if (!curl) {
+        stat.status_code = c_status::ERR;
+        stat.status_string = nlohmann::json{{"error", "Failed to initialize CURL"}};
+        return stat;
+    }
+
+    const string req_url = std::format("{}/admin/users/{}", url, inst_token);
+
+    std::cout << "URL constructed successfully!\n";
+    std::cout << "URL: " << req_url << '\n';
+
+    struct curl_slist *headers = nullptr;
+    const string authorization = std::format("Authorization: {}", wuz_admin_token);
+
+    headers = curl_slist_append(headers, authorization.c_str());
+    headers = curl_slist_append(headers, "Content-Type: application/json");
+    headers = curl_slist_append(headers, "accept: application/json");
+
+    curl_easy_setopt(curl, CURLOPT_URL, req_url.c_str());
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+    curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "DELETE");
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &responseBody);
+
+    if (const CURLcode res = curl_easy_perform(curl); res != CURLE_OK) {
+        std::cerr << "CURL error: " <<  curl_easy_strerror(res) << '\n';
+        curl_slist_free_all(headers);
+        curl_easy_cleanup(curl);
+        stat.status_code = c_status::ERR;
+        stat.status_string = nlohmann::json{{"error", curl_easy_strerror(res)}};
+        return stat;
+    }
+
+    curl_slist_free_all(headers);
+    curl_easy_cleanup(curl);
+    stat.status_code = c_status::OK;
+
+    try {
+        stat.status_string = nlohmann::json::parse(responseBody);
+    } catch (const std::exception& e) {
+        stat.status_string = nlohmann::json{
+                {"raw_response", responseBody}
         };
     }
 

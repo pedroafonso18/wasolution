@@ -146,38 +146,6 @@ Status Database::insertLog(const std::string& log_level, const std::string& log_
         return stat;
     }
 }
-
-Status Database::deleteInstance(const std::string &instance_id) {
-    apiLogger.info("Iniciando exclusão da instância: " + instance_id);
-    Status stat;
-    try {
-        if (!c || !c->is_open()) {
-            apiLogger.error("Conexão com banco de dados não está aberta");
-            stat.status_string = "DB connection is not open, returning error...\n";
-            stat.status_code = c_status::ERR;
-            return stat;
-        }
-
-        pqxx::work wrk(*c);
-        std::string query = "DELETE FROM instances WHERE instance_id = " + wrk.quote(instance_id);
-        apiLogger.debug("Executando query: " + query);
-
-        pqxx::result res = wrk.exec(query);
-        wrk.commit();
-
-        apiLogger.info("Instância excluída com sucesso: " + instance_id);
-        stat.status_code = c_status::OK;
-        stat.status_string = "Successfully deleted the instance from the db!\n";
-        return stat;
-
-    } catch (const std::exception& e) {
-        apiLogger.error("Erro ao excluir instância: " + std::string(e.what()));
-        stat.status_string = e.what();
-        stat.status_code = c_status::ERR;
-        return stat;
-    }
-}
-
 Status Database::createInstance_w(std::string inst_token, std::string inst_name) {
     Status stat;
     try {
@@ -253,44 +221,6 @@ std::optional<std::string> Database::getQrCodeFromDB(const std::string& token) c
     }
 }
 
-Status Database::deleteInstance_w(std::string inst_token) {
-    Status stat;
-    try {
-        if (!c || !c->is_open()) {
-            stat.status_string = "DB connection is not open, returning error...\n";
-            stat.status_code = c_status::ERR;
-            return stat;
-        }
-
-        std::cout << "Iniciando operação de exclusão para token: " << inst_token << std::endl;
-
-        pqxx::work wrk(*c);
-        std::string query = "DELETE FROM users WHERE id = " +
-            wrk.quote(inst_token) + " OR token = " +
-            wrk.quote(inst_token);
-
-        std::cout << "Executing SQL query: " << query << std::endl;
-
-        pqxx::result res = wrk.exec(query);
-
-        std::cout << "Query executada, commitando transação" << std::endl;
-
-        wrk.commit();
-
-        std::cout << "Transação finalizada com sucesso" << std::endl;
-
-        stat.status_code = c_status::OK;
-        stat.status_string = "Successfully deleted the instance from the db!\n";
-
-        return stat;
-
-    } catch (const std::exception& e) {
-        std::cerr << "Erro durante operação de exclusão: " << e.what() << std::endl;
-        stat.status_string = e.what();
-        stat.status_code = c_status::ERR;
-        return stat;
-    }
-}
 Status Database::insertWebhook_w(std::string inst_token, std::string webhook_url) {
 
     Status stat;
@@ -318,6 +248,37 @@ Status Database::insertWebhook_w(std::string inst_token, std::string webhook_url
         return stat;
 
     } catch (const std::exception& e) {
+        stat.status_string = e.what();
+        stat.status_code = c_status::ERR;
+        return stat;
+    }
+}
+
+Status Database::deleteInstance(const std::string &instance_id) {
+    apiLogger.info("Iniciando exclusão da instância: " + instance_id);
+    Status stat;
+    try {
+        if (!c || !c->is_open()) {
+            apiLogger.error("Conexão com banco de dados não está aberta");
+            stat.status_string = "DB connection is not open, returning error...\n";
+            stat.status_code = c_status::ERR;
+            return stat;
+        }
+
+        pqxx::work wrk(*c);
+        std::string query = "DELETE FROM instances WHERE instance_id = " + wrk.quote(instance_id);
+        apiLogger.debug("Executando query: " + query);
+
+        pqxx::result res = wrk.exec(query);
+        wrk.commit();
+
+        apiLogger.info("Instância excluída com sucesso: " + instance_id);
+        stat.status_code = c_status::OK;
+        stat.status_string = "Successfully deleted the instance from the db!\n";
+        return stat;
+
+    } catch (const std::exception& e) {
+        apiLogger.error("Erro ao excluir instância: " + std::string(e.what()));
         stat.status_string = e.what();
         stat.status_code = c_status::ERR;
         return stat;

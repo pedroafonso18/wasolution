@@ -28,6 +28,5 @@ public:
     /* Wuzapi é uma api bem mal feita, então tem algumas operações que tem de ser feitas
      * diretamente no banco de dados, o que é uma merda, mas fazer o que?*/
     Status createInstance_w(std::string inst_token, std::string inst_name);
-    Status deleteInstance_w(std::string inst_token);
     Status insertWebhook_w(std::string inst_token, std::string webhook_url);
 };

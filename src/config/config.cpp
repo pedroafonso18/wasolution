@@ -26,6 +26,7 @@ void Config::loadEnv() {
     env_vars.db_url = dotenv::getenv("DB_URL", "");
     env_vars.db_url_wuz = dotenv::getenv("DB_URL_WUZ", "");
     env_vars.default_webhook = dotenv::getenv("DEFAULT_WEBHOOK", "");
+    env_vars.wuz_admin_token = dotenv::getenv("WUZ_ADMIN_TOKEN", "");
     env_vars.ip_address = dotenv::getenv("IP_ADDRESS", getIpAddress());
 }
 
