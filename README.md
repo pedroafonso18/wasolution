@@ -21,7 +21,7 @@ WASolution é uma API wrapper que unifica as funcionalidades das APIs Evolution 
 - Boost.Asio (Networking)
 - nlohmann/json (JSON parsing)
 - spdlog (Logging)
-- SQLite (Banco de dados)
+- Postgres (Banco de dados)
 - libcurl (HTTP client)
 
 ## 📋 Pré-requisitos
@@ -29,7 +29,7 @@ WASolution é uma API wrapper que unifica as funcionalidades das APIs Evolution 
 - Boost Library (versão 1.70 ou superior)
 - CMake (versão 3.10 ou superior)
 - libcurl
-- SQLite3
+- Postgres
 
 ## 🔧 Instalação
 1. Clone o repositório:
@@ -73,7 +73,7 @@ EVO_TOKEN=seu_token_evolution
 WUZ_ADMIN_TOKEN=seu_token_wuzapi
 
 # Configuração do banco de dados
-DB_URL=sqlite:///wasolution.db
+DB_URL=postgres:///wasolution.db
 
 # Configuração do servidor
 IP_ADDRESS=0.0.0.0
@@ -126,7 +126,7 @@ curl -X POST http://localhost:8080/sendMessage \
 
 ## 🗄️ Banco de Dados
 
-O sistema utiliza SQLite para armazenar informações das instâncias. O banco é criado automaticamente na primeira execução.
+O sistema utiliza Postgres para armazenar informações das instâncias. O banco é criado automaticamente na primeira execução.
 
 ### Estrutura da Tabela de Instâncias:
 - `instance_id`: Identificador único da instância
