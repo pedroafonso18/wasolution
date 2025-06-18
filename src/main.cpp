@@ -356,12 +356,21 @@ int main() {
     try {
         auto const address = net::ip::make_address(IP);
 
-        net::io_context ioc{1};
+        const int threads = std::thread::hardware_concurrency();
+        net::io_context ioc{threads};
 
         auto listener = std::make_shared<Listener>(ioc, tcp::endpoint{address, PORT});
         listener->run();
 
-        ioc.run();
+        std::vector<std::thread> thread_pool;
+        for (int i = 0; i < threads; ++i) {
+            thread_pool.emplace_back([&ioc] { ioc.run(); });
+        }
+
+        for (auto& t : thread_pool) {
+            t.join();
+        }
+
     } catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << std::endl;
     }

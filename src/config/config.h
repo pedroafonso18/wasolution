@@ -10,6 +10,7 @@ typedef struct {
     std::string db_url;
     std::string db_url_wuz;
     std::string default_webhook;
+    std::string ip_address;
 } Env;
 
 class Config{
@@ -19,4 +20,5 @@ class Config{
     public:
         Config();
         const Env& getEnv() const;
+        const std::string getIpAddress() const;
 };
