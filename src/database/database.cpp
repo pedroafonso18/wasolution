@@ -141,22 +141,24 @@ Status Database::deleteInstance(const std::string &instance_id) {
             return stat;
         }
 
+        std::cout << "Iniciando exclusão da instância principal com ID: " << instance_id << std::endl;
+
         pqxx::work wrk(*c);
-        pqxx::result res = wrk.exec(
-            "DELETE FROM instances WHERE instance_id = " +
-            wrk.quote(instance_id)
-        );
+        std::string query = "DELETE FROM instances WHERE instance_id = " + wrk.quote(instance_id);
+
+        std::cout << "Executando SQL: " << query << std::endl;
+        pqxx::result res = wrk.exec(query);
+        std::cout << "Operação DELETE concluída" << std::endl;
+
         wrk.commit();
-        if (res.empty()) {
-            stat.status_string = "Couldn't delete the instance from the db...\n";
-            stat.status_code = c_status::ERR;
-            return stat;
-        }
+        std::cout << "Transação finalizada com sucesso" << std::endl;
+
         stat.status_code = c_status::OK;
         stat.status_string = "Successfully deleted the instance from the db!\n";
         return stat;
 
     } catch (const std::exception& e) {
+        std::cerr << "Erro na exclusão da instância principal: " << e.what() << std::endl;
         stat.status_string = e.what();
         stat.status_code = c_status::ERR;
         return stat;
@@ -247,20 +249,59 @@ Status Database::deleteInstance_w(std::string inst_token) {
             return stat;
         }
 
+        std::cout << "Iniciando operação de exclusão para token: " << inst_token << std::endl;
+
+        pqxx::work wrk(*c);
+        std::string query = "DELETE FROM users WHERE id = " +
+            wrk.quote(inst_token) + " OR token = " +
+            wrk.quote(inst_token);
+
+        std::cout << "Executing SQL query: " << query << std::endl;
+
+        pqxx::result res = wrk.exec(query);
+
+        std::cout << "Query executada, commitando transação" << std::endl;
+
+        wrk.commit();
+
+        std::cout << "Transação finalizada com sucesso" << std::endl;
+
+        stat.status_code = c_status::OK;
+        stat.status_string = "Successfully deleted the instance from the db!\n";
+
+        return stat;
+
+    } catch (const std::exception& e) {
+        std::cerr << "Erro durante operação de exclusão: " << e.what() << std::endl;
+        stat.status_string = e.what();
+        stat.status_code = c_status::ERR;
+        return stat;
+    }
+}
+Status Database::insertWebhook_w(std::string inst_token, std::string webhook_url) {
+
+    Status stat;
+    try {
+        if (!c || !c->is_open()) {
+            stat.status_string = "DB connection is not open, returning error...\n";
+            stat.status_code = c_status::ERR;
+            return stat;
+        }
+
         pqxx::work wrk(*c);
         pqxx::result res = wrk.exec(
-            "DELETE FROM users WHERE id = " +
-            wrk.quote(inst_token) + " OR token = " +
+            "UPDATE users SET webhook = " +
+            wrk.quote(webhook_url) + " WHERE id = " +
             wrk.quote(inst_token)
         );
         wrk.commit();
         if (res.empty()) {
-            stat.status_string = "Couldn't delete the instance from the db...\n";
+            stat.status_string = "Couldn't update the webhook on the db...\n";
             stat.status_code = c_status::ERR;
             return stat;
         }
         stat.status_code = c_status::OK;
-        stat.status_string = "Successfully deleted the instance from the db!\n";
+        stat.status_string = "Successfully updated the webhook on the db!\n";
         return stat;
 
     } catch (const std::exception& e) {

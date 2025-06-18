@@ -180,37 +180,26 @@ Status Handler::deleteInstance(string instance_id) {
         stat.status_string = nlohmann::json{{"error", "Couldn't get the instance from the db."}};
         return stat;
     }
+
+    Status dbStatus = db.deleteInstance(instance_id);
+    if (dbStatus.status_code == c_status::ERR) {
+        std::cerr << "Erro ao excluir instância do banco de dados: "
+                  << dbStatus.status_string.dump() << std::endl;
+        stat.status_code = c_status::ERR;
+        stat.status_string = nlohmann::json{{"error", "Couldn't delete the instance from the db..."}};
+        return stat;
+    }
+
     if (instance.value().instance_type == "WUZAPI") {
         Database db_wuz;
-        Status response = Wuzapi::deleteInstance_w(instance_id, env.wuz_url);
-        try {
-            if (response.status_code == c_status::OK) {
-                response.status_string = nlohmann::json::parse(response.status_string.dump());
-            }
-        } catch (const std::exception& e) {
-            if (response.status_code == c_status::OK) {
-                response.status_string = nlohmann::json{
-                    {"message", "Instance deleted successfully!"},
-                    {"api_response", response.status_string}
-                };
-            }
-        }
 
-        if (response.status_code == c_status::OK) {
-            Status dbStatus = db.deleteInstance(instance_id);
-            if (dbStatus.status_code == c_status::ERR) {
-                std::cerr << "Erro ao excluir instância do banco de dados: "
-                          << dbStatus.status_string.dump() << std::endl;
-            }
-        }
         if (auto connection = db_wuz.connect(env.db_url_wuz); connection.status_code == c_status::ERR) {
             return connection;
         }
+        auto del = db_wuz.deleteInstance_w(instance_id);
 
-        if (auto del = db_wuz.deleteInstance_w(instance_id); del.status_code == c_status::ERR) {
-            return del;
-        }
-        return response;
+        return del;
+
     } else if (instance.value().instance_type == "EVOLUTION") {
         Status response = Evolution::deleteInstance_e(instance_id, env.evo_token, env.evo_url);
         try {
@@ -225,7 +214,6 @@ Status Handler::deleteInstance(string instance_id) {
                 };
             }
         }
-        db.deleteInstance(instance_id);
         return response;
     }
     stat.status_code = c_status::ERR;

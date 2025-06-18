@@ -10,13 +10,10 @@
 using std::string;
 
 class Wuzapi {
-private:
-
 public:
     Wuzapi() = delete;
     static Status sendMessage_w(string phone, string token, string url, MediaType type, string msg_template);
     static Status createInstance_w(string inst_token, string url, string webhook_url, string proxy_url);
-    static Status deleteInstance_w(string inst_token, string url);
     static Status connectInstance_w(string inst_token, string url);
     static Status logoutInstance_w(string inst_token, string url);
     static Status setWebhook_w(string token, string webhook_url, string url);

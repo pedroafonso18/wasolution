@@ -46,16 +46,38 @@ Status Wuzapi::setProxy_w(string token, string proxy_url, string url) {
         return stat;
     }
 
+    bool http_ok = isHttpResponseOk(curl);
+
     curl_slist_free_all(headers);
     curl_easy_cleanup(curl);
-    stat.status_code = c_status::OK;
 
     try {
-        stat.status_string = nlohmann::json::parse(responseBody);
+        nlohmann::json response = nlohmann::json::parse(responseBody);
+
+        if (!http_ok) {
+            stat.status_code = c_status::ERR;
+            stat.status_string = response;
+            if (!response.contains("error")) {
+                response["error"] = "Servidor retornou código de erro HTTP";
+                stat.status_string = response;
+            }
+        } else {
+            stat.status_code = c_status::OK;
+            stat.status_string = response;
+        }
     } catch (const std::exception& e) {
-        stat.status_string = nlohmann::json{
+        if (!http_ok) {
+            stat.status_code = c_status::ERR;
+            stat.status_string = nlohmann::json{
+                {"error", "Erro no servidor remoto"},
                 {"raw_response", responseBody}
-        };
+            };
+        } else {
+            stat.status_code = c_status::OK;
+            stat.status_string = nlohmann::json{
+                {"raw_response", responseBody}
+            };
+        }
     }
 
     return stat;
@@ -97,14 +119,26 @@ Status Wuzapi::getQrCode_w(string token, string url) {
         return stat;
     }
 
+    bool http_ok = isHttpResponseOk(curl);
+
     curl_slist_free_all(headers);
     curl_easy_cleanup(curl);
-    stat.status_code = c_status::OK;
 
     try {
         nlohmann::json response = nlohmann::json::parse(responseBody);
         std::cout << "Resposta recebida da API: " << responseBody << std::endl;
 
+        if (!http_ok) {
+            stat.status_code = c_status::ERR;
+            stat.status_string = response;
+            if (!response.contains("error")) {
+                response["error"] = "Servidor retornou código de erro HTTP";
+                stat.status_string = response;
+            }
+            return stat;
+        }
+
+        stat.status_code = c_status::OK;
         stat.status_string = response;
 
         std::cout << "Estrutura da resposta: ";
@@ -170,10 +204,19 @@ Status Wuzapi::getQrCode_w(string token, string url) {
         }
     } catch (const std::exception& e) {
         std::cerr << "Exceção ao processar resposta: " << e.what() << std::endl;
-        stat.status_string = nlohmann::json{
-            {"raw_response", responseBody},
-            {"error", e.what()}
-        };
+        if (!http_ok) {
+            stat.status_code = c_status::ERR;
+            stat.status_string = nlohmann::json{
+                {"error", "Erro no servidor remoto"},
+                {"raw_response", responseBody}
+            };
+        } else {
+            stat.status_code = c_status::OK;
+            stat.status_string = nlohmann::json{
+                {"raw_response", responseBody},
+                {"error", e.what()}
+            };
+        }
     }
 
     return stat;
@@ -195,7 +238,7 @@ Status Wuzapi::setWebhook_w(string token, string webhook_url, string url) {
 
     const string req_url = std::format("{}/webhook", url);
     string req_hdr = std::format("token: {}", token);
-    string req_body = std::format(R"({{"webhook": "{}", "data": ["Message", "ReadReceipt"]}})", webhook_url);
+    string req_body = std::format(R"({{"webhook": "{}", "data": ["Message","ReadReceipt","Presence","HistorySync","ChatPresence"]}})", webhook_url);
     std::cout << "BODY and URL constructed successfully!\n";
     std::cout << "BODY: " << req_body << '\n';
     std::cout << "URL: " << req_url << '\n';
@@ -223,19 +266,41 @@ Status Wuzapi::setWebhook_w(string token, string webhook_url, string url) {
         return stat;
     }
 
+    bool http_ok = isHttpResponseOk(curl);
+
     curl_slist_free_all(headers);
     curl_easy_cleanup(curl);
-    stat.status_code = c_status::OK;
 
     try {
-        stat.status_string = nlohmann::json::parse(responseBody);
-    } catch (const std::exception& e) {
-        stat.status_string = nlohmann::json{
-                    {"raw_response", responseBody}
-        };
-    }
-    std::cout << stat.status_string << '\n';
+        nlohmann::json response = nlohmann::json::parse(responseBody);
 
+        if (!http_ok) {
+            stat.status_code = c_status::ERR;
+            stat.status_string = response;
+            if (!response.contains("error")) {
+                response["error"] = "Servidor retornou código de erro HTTP";
+                stat.status_string = response;
+            }
+        } else {
+            stat.status_code = c_status::OK;
+            stat.status_string = response;
+        }
+    } catch (const std::exception& e) {
+        if (!http_ok) {
+            stat.status_code = c_status::ERR;
+            stat.status_string = nlohmann::json{
+                {"error", "Erro no servidor remoto"},
+                {"raw_response", responseBody}
+            };
+        } else {
+            stat.status_code = c_status::OK;
+            stat.status_string = nlohmann::json{
+                {"raw_response", responseBody}
+            };
+        }
+    }
+
+    std::cout << stat.status_string << '\n';
     return stat;
 }
 
@@ -290,16 +355,38 @@ Status Wuzapi::sendMessage_w(string phone, string token, string url, MediaType t
         return stat;
     }
 
+    bool http_ok = isHttpResponseOk(curl);
+
     curl_slist_free_all(headers);
     curl_easy_cleanup(curl);
-    stat.status_code = c_status::OK;
 
     try {
-        stat.status_string = nlohmann::json::parse(responseBody);
+        nlohmann::json response = nlohmann::json::parse(responseBody);
+
+        if (!http_ok) {
+            stat.status_code = c_status::ERR;
+            stat.status_string = response;
+            if (!response.contains("error")) {
+                response["error"] = "Servidor retornou código de erro HTTP";
+                stat.status_string = response;
+            }
+        } else {
+            stat.status_code = c_status::OK;
+            stat.status_string = response;
+        }
     } catch (const std::exception& e) {
-        stat.status_string = nlohmann::json{
-            {"raw_response", responseBody}
-        };
+        if (!http_ok) {
+            stat.status_code = c_status::ERR;
+            stat.status_string = nlohmann::json{
+                {"error", "Erro no servidor remoto"},
+                {"raw_response", responseBody}
+            };
+        } else {
+            stat.status_code = c_status::OK;
+            stat.status_string = nlohmann::json{
+                {"raw_response", responseBody}
+            };
+        }
     }
 
     return stat;
@@ -307,7 +394,9 @@ Status Wuzapi::sendMessage_w(string phone, string token, string url, MediaType t
 
 Status Wuzapi::createInstance_w(string inst_token, string url, string webhook_url, string proxy_url) {
     Status stat;
-
+    Config cfg;
+    Env env = cfg.getEnv();
+    Database db;
     if (!proxy_url.empty()) {
         stat = setProxy_w(inst_token, proxy_url, url);
         if (stat.status_code == c_status::ERR) {
@@ -320,6 +409,11 @@ Status Wuzapi::createInstance_w(string inst_token, string url, string webhook_ur
         if (stat.status_code == c_status::ERR) {
             return stat;
         }
+        if (auto connection = db.connect(env.db_url_wuz); connection.status_code == c_status::ERR) {
+            std::cout << "ERROR: Erro quando conectando no banco de dados, continuando...\n";
+        } else {
+            db.insertWebhook_w(inst_token, webhook_url);
+        }
     }
 
     if (auto conn = connectInstance_w(inst_token, url); conn.status_code == c_status::ERR) {
@@ -327,59 +421,6 @@ Status Wuzapi::createInstance_w(string inst_token, string url, string webhook_ur
     }
 
     return getQrCode_w(inst_token, url);
-}
-
-Status Wuzapi::deleteInstance_w(string inst_token, string url) {
-    CURL *curl = curl_easy_init();
-    std::string responseBody;
-    Status stat;
-
-    if (!curl) {
-        stat.status_code = c_status::ERR;
-        stat.status_string = nlohmann::json{{"error", "Failed to initialize CURL"}};
-        return stat;
-    }
-
-    const string req_url = std::format("{}/session/logout", url);
-    string auth_token = std::format("token: {}", inst_token);
-
-    std::cout << "URL constructed successfully!\n";
-    std::cout << "URL: " << req_url << '\n';
-
-    struct curl_slist *headers = nullptr;
-
-    headers = curl_slist_append(headers, auth_token.c_str());
-    headers = curl_slist_append(headers, "Content-Type: application/json");
-    headers = curl_slist_append(headers, "accept: application/json");
-
-    curl_easy_setopt(curl, CURLOPT_URL, req_url.c_str());
-    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
-    curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "POST");
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
-    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &responseBody);
-
-    if (const CURLcode res = curl_easy_perform(curl); res != CURLE_OK) {
-        std::cerr << "CURL error: " <<  curl_easy_strerror(res) << '\n';
-        curl_slist_free_all(headers);
-        curl_easy_cleanup(curl);
-        stat.status_code = c_status::ERR;
-        stat.status_string = nlohmann::json{{"error", curl_easy_strerror(res)}};
-        return stat;
-    }
-
-    curl_slist_free_all(headers);
-    curl_easy_cleanup(curl);
-    stat.status_code = c_status::OK;
-
-    try {
-        stat.status_string = nlohmann::json::parse(responseBody);
-    } catch (const std::exception& e) {
-        stat.status_string = nlohmann::json{
-            {"raw_response", responseBody}
-        };
-    }
-
-    return stat;
 }
 
 Status Wuzapi::connectInstance_w(string inst_token, string url) {
@@ -396,7 +437,7 @@ Status Wuzapi::connectInstance_w(string inst_token, string url) {
     const string req_url = std::format("{}/session/connect", url);
     string header_auth = std::format("token: {}", inst_token);
 
-    string req_body = std::format(R"({{"Subscribe": ["Message", "ChatPresence"], "Immediate": true}})");
+    string req_body = std::format(R"({{"Subscribe": ["Message","ReadReceipt","Presence","HistorySync","ChatPresence"], "Immediate": true}})");
 
     std::cout << "BODY and URL constructed successfully!\n";
     std::cout << "BODY: " << req_body << '\n';
@@ -423,16 +464,38 @@ Status Wuzapi::connectInstance_w(string inst_token, string url) {
         return stat;
     }
 
+    bool http_ok = isHttpResponseOk(curl);
+
     curl_slist_free_all(headers);
     curl_easy_cleanup(curl);
-    stat.status_code = c_status::OK;
 
     try {
-        stat.status_string = nlohmann::json::parse(responseBody);
+        nlohmann::json response = nlohmann::json::parse(responseBody);
+
+        if (!http_ok) {
+            stat.status_code = c_status::ERR;
+            stat.status_string = response;
+            if (!response.contains("error")) {
+                response["error"] = "Servidor retornou código de erro HTTP";
+                stat.status_string = response;
+            }
+        } else {
+            stat.status_code = c_status::OK;
+            stat.status_string = response;
+        }
     } catch (const std::exception& e) {
-        stat.status_string = nlohmann::json{
-            {"raw_response", responseBody}
-        };
+        if (!http_ok) {
+            stat.status_code = c_status::ERR;
+            stat.status_string = nlohmann::json{
+                {"error", "Erro no servidor remoto"},
+                {"raw_response", responseBody}
+            };
+        } else {
+            stat.status_code = c_status::OK;
+            stat.status_string = nlohmann::json{
+                {"raw_response", responseBody}
+            };
+        }
     }
 
     return stat;

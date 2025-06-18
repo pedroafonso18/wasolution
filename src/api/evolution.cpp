@@ -98,16 +98,38 @@ Status Evolution::sendMessage_e(string phone, string token, string url, MediaTyp
         return stat;
     }
 
+    bool http_ok = isHttpResponseOk(curl);
+
     curl_slist_free_all(headers);
     curl_easy_cleanup(curl);
-    stat.status_code = c_status::OK;
 
     try {
-        stat.status_string = nlohmann::json::parse(responseBody);
+        nlohmann::json response = nlohmann::json::parse(responseBody);
+
+        if (!http_ok) {
+            stat.status_code = c_status::ERR;
+            stat.status_string = response;
+            if (!response.contains("error")) {
+                response["error"] = "Servidor retornou código de erro HTTP";
+                stat.status_string = response;
+            }
+        } else {
+            stat.status_code = c_status::OK;
+            stat.status_string = response;
+        }
     } catch (const std::exception& e) {
-        stat.status_string = nlohmann::json{
-            {"raw_response", responseBody}
-        };
+        if (!http_ok) {
+            stat.status_code = c_status::ERR;
+            stat.status_string = nlohmann::json{
+                {"error", "Erro no servidor remoto"},
+                {"raw_response", responseBody}
+            };
+        } else {
+            stat.status_code = c_status::OK;
+            stat.status_string = nlohmann::json{
+                {"raw_response", responseBody}
+            };
+        }
     }
 
     return stat;
@@ -118,7 +140,6 @@ Status Evolution::createInstance_e(string evo_token, string inst_token, string i
     std::string responseBody;
     Config cfg;
     auto env = cfg.getEnv();
-    std::string web_url = env.callback_url;
     Status stat;
     Proxy prox = ParseProxy(proxy_url);
     if (!curl) {
@@ -129,11 +150,11 @@ Status Evolution::createInstance_e(string evo_token, string inst_token, string i
     string req_body;
     const string req_url = std::format("{}/instance/create", url);
     if (!prox.host.empty() && !webhook_url.empty()) {
-        req_body = std::format(R"({{"instanceName" : "{}","token" : "{}", "integration": "WHATSAPP-BAILEYS", "qrcode" : true, "webhookUrl" : "{}", "events" : ["MESSAGES_UPSERT"], "proxyHost": "{}", "proxyPort": "{}", "proxyProtocol" : "{}",  "proxyUsername" : "{}", "proxyPassword" : "{}"}})", inst_name, inst_token, web_url, prox.host, prox.port, prox.protocol, prox.username, prox.password);
+        req_body = std::format(R"({{"instanceName" : "{}","token" : "{}", "integration": "WHATSAPP-BAILEYS", "qrcode" : true, "webhookUrl" : "{}", "events" : ["MESSAGES_UPSERT"], "proxyHost": "{}", "proxyPort": "{}", "proxyProtocol" : "{}",  "proxyUsername" : "{}", "proxyPassword" : "{}"}})", inst_name, inst_token, webhook_url, prox.host, prox.port, prox.protocol, prox.username, prox.password);
     } else if (!prox.host.empty() && webhook_url.empty()) {
         req_body = std::format(R"({{"instanceName" : "{}","token" : "{}", "integration": "WHATSAPP-BAILEYS", "qrcode" : true, "proxyHost": "{}", "proxyPort": "{}", "proxyProtocol" : "{}",  "proxyUsername" : "{}", "proxyPassword" : "{}"}})", inst_name, inst_token,prox.host, prox.port, prox.protocol, prox.username, prox.password);
     } else if (prox.host.empty() && !webhook_url.empty()) {
-        req_body = std::format(R"({{"instanceName" : "{}","token" : "{}", "integration": "WHATSAPP-BAILEYS", "qrcode" : true, "webhookUrl" : "{}", "events" : ["MESSAGES_UPSERT"]}})", inst_name, inst_token, web_url);
+        req_body = std::format(R"({{"instanceName" : "{}","token" : "{}", "integration": "WHATSAPP-BAILEYS", "qrcode" : true, "webhookUrl" : "{}", "events" : ["MESSAGES_UPSERT"]}})", inst_name, inst_token, webhook_url);
     } else if (prox.host.empty() && webhook_url.empty()) {
         req_body = std::format(R"({{"instanceName" : "{}","token" : "{}", "integration": "WHATSAPP-BAILEYS"}})", inst_name, inst_token);
     }
@@ -164,16 +185,38 @@ Status Evolution::createInstance_e(string evo_token, string inst_token, string i
         return stat;
     }
 
+    bool http_ok = isHttpResponseOk(curl);
+
     curl_slist_free_all(headers);
     curl_easy_cleanup(curl);
-    stat.status_code = c_status::OK;
 
     try {
-        stat.status_string = nlohmann::json::parse(responseBody);
+        nlohmann::json response = nlohmann::json::parse(responseBody);
+
+        if (!http_ok) {
+            stat.status_code = c_status::ERR;
+            stat.status_string = response;
+            if (!response.contains("error")) {
+                response["error"] = "Servidor retornou código de erro HTTP";
+                stat.status_string = response;
+            }
+        } else {
+            stat.status_code = c_status::OK;
+            stat.status_string = response;
+        }
     } catch (const std::exception& e) {
-        stat.status_string = nlohmann::json{
-            {"raw_response", responseBody}
-        };
+        if (!http_ok) {
+            stat.status_code = c_status::ERR;
+            stat.status_string = nlohmann::json{
+                {"error", "Erro no servidor remoto"},
+                {"raw_response", responseBody}
+            };
+        } else {
+            stat.status_code = c_status::OK;
+            stat.status_string = nlohmann::json{
+                {"raw_response", responseBody}
+            };
+        }
     }
 
     return stat;
@@ -217,16 +260,38 @@ Status Evolution::deleteInstance_e(string inst_token, string evo_token, string u
         return stat;
     }
 
+    bool http_ok = isHttpResponseOk(curl);
+
     curl_slist_free_all(headers);
     curl_easy_cleanup(curl);
-    stat.status_code = c_status::OK;
 
     try {
-        stat.status_string = nlohmann::json::parse(responseBody);
+        nlohmann::json response = nlohmann::json::parse(responseBody);
+
+        if (!http_ok) {
+            stat.status_code = c_status::ERR;
+            stat.status_string = response;
+            if (!response.contains("error")) {
+                response["error"] = "Servidor retornou código de erro HTTP";
+                stat.status_string = response;
+            }
+        } else {
+            stat.status_code = c_status::OK;
+            stat.status_string = response;
+        }
     } catch (const std::exception& e) {
-        stat.status_string = nlohmann::json{
-            {"raw_response", responseBody}
-        };
+        if (!http_ok) {
+            stat.status_code = c_status::ERR;
+            stat.status_string = nlohmann::json{
+                {"error", "Erro no servidor remoto"},
+                {"raw_response", responseBody}
+            };
+        } else {
+            stat.status_code = c_status::OK;
+            stat.status_string = nlohmann::json{
+                {"raw_response", responseBody}
+            };
+        }
     }
 
     return stat;
@@ -268,16 +333,38 @@ Status Evolution::connectInstance_e(const string& inst_token, const string &evo_
         return stat;
     }
 
+    bool http_ok = isHttpResponseOk(curl);
+
     curl_slist_free_all(headers);
     curl_easy_cleanup(curl);
-    stat.status_code = c_status::OK;
 
     try {
-        stat.status_string = nlohmann::json::parse(responseBody);
+        nlohmann::json response = nlohmann::json::parse(responseBody);
+
+        if (!http_ok) {
+            stat.status_code = c_status::ERR;
+            stat.status_string = response;
+            if (!response.contains("error")) {
+                response["error"] = "Servidor retornou código de erro HTTP";
+                stat.status_string = response;
+            }
+        } else {
+            stat.status_code = c_status::OK;
+            stat.status_string = response;
+        }
     } catch (const std::exception& e) {
-        stat.status_string = nlohmann::json{
-            {"raw_response", responseBody}
-        };
+        if (!http_ok) {
+            stat.status_code = c_status::ERR;
+            stat.status_string = nlohmann::json{
+                {"error", "Erro no servidor remoto"},
+                {"raw_response", responseBody}
+            };
+        } else {
+            stat.status_code = c_status::OK;
+            stat.status_string = nlohmann::json{
+                {"raw_response", responseBody}
+            };
+        }
     }
 
     return stat;
@@ -320,16 +407,38 @@ Status Evolution::logoutInstance_e(const string& inst_token, const string& evo_u
         return stat;
     }
 
+    bool http_ok = isHttpResponseOk(curl);
+
     curl_slist_free_all(headers);
     curl_easy_cleanup(curl);
-    stat.status_code = c_status::OK;
 
     try {
-        stat.status_string = nlohmann::json::parse(responseBody);
+        nlohmann::json response = nlohmann::json::parse(responseBody);
+
+        if (!http_ok) {
+            stat.status_code = c_status::ERR;
+            stat.status_string = response;
+            if (!response.contains("error")) {
+                response["error"] = "Servidor retornou código de erro HTTP";
+                stat.status_string = response;
+            }
+        } else {
+            stat.status_code = c_status::OK;
+            stat.status_string = response;
+        }
     } catch (const std::exception& e) {
-        stat.status_string = nlohmann::json{
+        if (!http_ok) {
+            stat.status_code = c_status::ERR;
+            stat.status_string = nlohmann::json{
+                {"error", "Erro no servidor remoto"},
                 {"raw_response", responseBody}
-        };
+            };
+        } else {
+            stat.status_code = c_status::OK;
+            stat.status_string = nlohmann::json{
+                {"raw_response", responseBody}
+            };
+        }
     }
 
     return stat;
@@ -377,17 +486,40 @@ Status Evolution::setWebhook_e(string token, string webhook_url, string url, str
         return stat;
     }
 
+    bool http_ok = isHttpResponseOk(curl);
+
     curl_slist_free_all(headers);
     curl_easy_cleanup(curl);
-    stat.status_code = c_status::OK;
 
     try {
-        stat.status_string = nlohmann::json::parse(responseBody);
+        nlohmann::json response = nlohmann::json::parse(responseBody);
+
+        if (!http_ok) {
+            stat.status_code = c_status::ERR;
+            stat.status_string = response;
+            if (!response.contains("error")) {
+                response["error"] = "Servidor retornou código de erro HTTP";
+                stat.status_string = response;
+            }
+        } else {
+            stat.status_code = c_status::OK;
+            stat.status_string = response;
+        }
     } catch (const std::exception& e) {
-        stat.status_string = nlohmann::json{
-            {"raw_response", responseBody}
-        };
+        if (!http_ok) {
+            stat.status_code = c_status::ERR;
+            stat.status_string = nlohmann::json{
+                {"error", "Erro no servidor remoto"},
+                {"raw_response", responseBody}
+            };
+        } else {
+            stat.status_code = c_status::OK;
+            stat.status_string = nlohmann::json{
+                {"raw_response", responseBody}
+            };
+        }
     }
+
     std::cout << stat.status_string << '\n';
 
     return stat;

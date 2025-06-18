@@ -18,6 +18,8 @@ using tcp = net::ip::tcp;
 
 http::response<http::string_body> handle_request(http::request<http::string_body> const& req) {
     if (req.method() == http::verb::post && req.target() == "/createInstance") {
+        Config cfg;
+        auto env = cfg.getEnv();
         http::response<http::string_body> res{http::status::ok, req.version()};
         res.set(http::field::server, "Beast");
         res.set(http::field::content_type, "application/json");
@@ -27,9 +29,8 @@ http::response<http::string_body> handle_request(http::request<http::string_body
             std::string instance_id = body.at("instance_id").get<std::string>();
             std::string instance_name = body.at("instance_name").get<std::string>();
             std::string api_type_str = body.at("api_type").get<std::string>();
-            std::string webhook_url = body.value("webhook_url", "");
+            std::string webhook_url = body.value("webhook_url", env.default_webhook);
             std::string proxy_url = body.value("proxy_url", "");
-
             ApiType api_type;
             if (api_type_str == "EVOLUTION") {
                 api_type = ApiType::EVOLUTION;
