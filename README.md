@@ -4,24 +4,32 @@
 WASolution é uma API wrapper que unifica as funcionalidades das APIs Evolution e Wuzapi do WhatsApp, fornecendo uma interface padronizada e simplificada para integração. O projeto visa facilitar o processo de unificação entre as duas APIs, oferecendo respostas e saídas padronizadas.
 
 ## 🚀 Funcionalidades
-- Integração unificada com Evolution API e Wuzapi
-- Interface padronizada para todas as operações
-- Sistema de webhooks generalizado (em desenvolvimento)
-- Suporte a migrações de banco de dados
-- Operações completas de banco de dados
-- API RESTful completa
+- ✅ Integração unificada com Evolution API e Wuzapi
+- ✅ Interface padronizada para todas as operações
+- ✅ Sistema de webhooks completo e funcional
+- ✅ Suporte a múltiplas instâncias simultâneas
+- ✅ Operações completas de banco de dados
+- ✅ API RESTful completa
+- ✅ Sistema de logging detalhado
+- ✅ Suporte a diferentes tipos de mídia (texto, imagem, áudio)
+- ✅ Gerenciamento completo de instâncias (criar, conectar, desconectar, excluir)
+- ✅ Configuração dinâmica de webhooks
 
 ## 🛠️ Tecnologias Utilizadas
-- C++
-- Boost.Beast
-- Boost.Asio
-- HTTP/HTTPS
-- WebSockets
+- C++17
+- Boost.Beast (HTTP Server)
+- Boost.Asio (Networking)
+- nlohmann/json (JSON parsing)
+- spdlog (Logging)
+- SQLite (Banco de dados)
+- libcurl (HTTP client)
 
 ## 📋 Pré-requisitos
 - Compilador C++ compatível com C++17 ou superior
-- Boost Library
+- Boost Library (versão 1.70 ou superior)
 - CMake (versão 3.10 ou superior)
+- libcurl
+- SQLite3
 
 ## 🔧 Instalação
 1. Clone o repositório:
@@ -43,21 +51,104 @@ make
 ```
 
 ## 🚀 Como Usar
-1. Inicie o servidor:
+1. Configure as variáveis de ambiente necessárias (ver seção de configuração)
+2. Inicie o servidor:
 ```bash
 ./wasolution
 ```
 
-2. A API estará disponível em `http://localhost:8080`
+3. A API estará disponível em `http://0.0.0.0:8080`
+
+## ⚙️ Configuração
+
+O sistema utiliza variáveis de ambiente para configuração. Crie um arquivo `.env` na raiz do projeto:
+
+```env
+# URLs das APIs
+EVO_URL=http://localhost:8080
+WUZ_URL=http://localhost:3000
+
+# Tokens de autenticação
+EVO_TOKEN=seu_token_evolution
+WUZ_ADMIN_TOKEN=seu_token_wuzapi
+
+# Configuração do banco de dados
+DB_URL=sqlite:///wasolution.db
+
+# Configuração do servidor
+IP_ADDRESS=0.0.0.0
+DEFAULT_WEBHOOK=https://seu-servidor.com/webhook
+```
 
 ## 📚 Documentação da API
-[DOCUMENTAÇÃO](docs/api.md)
+[DOCUMENTAÇÃO COMPLETA](docs/api.md)
 
 ### Endpoints Principais
-- `GET /`: Verificação de status da API
-- `POST /message`: Envio de mensagens
-- `GET /status`: Verificação de status da conexão
-- `POST /webhook`: Configuração de webhooks
+
+#### Gerenciamento de Instâncias
+- `POST /createInstance`: Criar nova instância
+- `POST /connectInstance`: Conectar instância existente
+- `DELETE /deleteInstance`: Excluir instância
+- `DELETE /logoutInstance`: Desconectar instância
+
+#### Mensagens
+- `POST /sendMessage`: Enviar mensagem (texto, imagem, áudio)
+
+#### Webhooks
+- `POST /setWebhook`: Configurar webhook para instância
+- `POST /webhook`: Receber notificações de webhook
+
+### Exemplo de Uso
+
+#### Criar uma instância:
+```bash
+curl -X POST http://localhost:8080/createInstance \
+  -H "Content-Type: application/json" \
+  -d '{
+    "instance_id": "minha_instancia",
+    "instance_name": "Minha Empresa",
+    "api_type": "EVOLUTION",
+    "webhook_url": "https://meu-servidor.com/webhook"
+  }'
+```
+
+#### Enviar uma mensagem:
+```bash
+curl -X POST http://localhost:8080/sendMessage \
+  -H "Content-Type: application/json" \
+  -d '{
+    "instance_id": "minha_instancia",
+    "number": "5511999999999",
+    "body": "Olá! Esta é uma mensagem de teste.",
+    "type": "TEXT"
+  }'
+```
+
+## 🗄️ Banco de Dados
+
+O sistema utiliza SQLite para armazenar informações das instâncias. O banco é criado automaticamente na primeira execução.
+
+### Estrutura da Tabela de Instâncias:
+- `instance_id`: Identificador único da instância
+- `instance_name`: Nome da instância
+- `instance_type`: Tipo de API (EVOLUTION ou WUZAPI)
+- `webhook_url`: URL do webhook configurada
+
+## 📊 Logs e Monitoramento
+
+O sistema gera logs detalhados para facilitar o debugging e monitoramento:
+
+- **Logs de API**: `logs/api.log`
+- **Logs de operações**: Logs de criação, conexão e envio de mensagens
+- **Logs de erros**: Detalhes de erros e exceções
+- **Logs de webhooks**: Processamento de webhooks recebidos
+
+## 🔒 Segurança
+
+- Validação de parâmetros de entrada
+- Tratamento de exceções robusto
+- Logs de auditoria para operações críticas
+- Suporte a proxy para conexões seguras
 
 ## 🤝 Contribuindo
 Contribuições são sempre bem-vindas! Por favor, leia as diretrizes de contribuição antes de submeter um pull request.
@@ -75,16 +166,22 @@ Este projeto está sob a licença [MIT](LICENSE). Veja o arquivo `LICENSE` para 
 Para suporte, envie um email para [pedroafonsoprogramador@gmail.com] ou abra uma issue no GitHub.
 
 ## 🔮 Roadmap
-- [ ] Implementação completa do sistema de webhooks
-- [ ] Migrações de banco de dados
+- [X] Implementação completa do sistema de webhooks
+- [X] Suporte a múltiplas instâncias
 - [X] Documentação completa da API
+- [X] Sistema de logging detalhado
+- [X] Suporte a diferentes tipos de mídia
 - [ ] Testes automatizados
 - [ ] Interface de administração web
-- [ ] Suporte a múltiplas instâncias
 - [ ] Sistema de cache
 - [ ] Monitoramento e métricas
+- [ ] Suporte a migrações de banco de dados
+- [ ] API de status e health check
+- [ ] Rate limiting
+- [ ] Autenticação e autorização
 
 ## 🙏 Agradecimentos
 - Evolution API
 - Wuzapi
 - Todos os contribuidores do projeto
+- Comunidade C++ e Boost

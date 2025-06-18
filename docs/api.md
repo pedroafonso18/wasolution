@@ -9,7 +9,7 @@ http://{IP}:{PORT}
 ```
 
 Onde:
-- `IP` é o endereço IP configurado (padrão: 192.168.0.180)
+- `IP` é o endereço IP configurado (padrão: 0.0.0.0)
 - `PORT` é a porta configurada (padrão: 8080)
 
 ## Formatos de Resposta
@@ -56,7 +56,10 @@ Cria uma nova instância do WhatsApp para gerenciamento.
 ```json
 {
     "status_code": 0,
-    "status_string": "Instância criada com sucesso"
+    "status_string": {
+        "message": "Instance created successfully!",
+        "api_response": "Resposta da API específica"
+    }
 }
 ```
 
@@ -64,7 +67,9 @@ Cria uma nova instância do WhatsApp para gerenciamento.
 ```json
 {
     "status_code": 1,
-    "status_string": "Erro ao criar instância"
+    "status_string": {
+        "error": "Erro ao criar instância"
+    }
 }
 ```
 
@@ -98,7 +103,10 @@ Inicia a conexão de uma instância existente.
 ```json
 {
     "status_code": 0,
-    "status_string": "Instância conectada com sucesso"
+    "status_string": {
+        "message": "Instance connected successfully!",
+        "api_response": "Resposta da API específica"
+    }
 }
 ```
 
@@ -144,11 +152,24 @@ Envia uma mensagem para um contato específico.
 }
 ```
 
+**Exemplo de Requisição (Áudio):**
+```json
+{
+    "instance_id": "instance001",
+    "number": "5511999999999",
+    "body": "https://exemplo.com/audio.mp3",
+    "type": "AUDIO"
+}
+```
+
 **Exemplo de Resposta de Sucesso:**
 ```json
 {
     "status_code": 0,
-    "status_string": "Mensagem enviada com sucesso"
+    "status_string": {
+        "message": "Successfully sent the message!",
+        "api_response": "Resposta da API específica"
+    }
 }
 ```
 
@@ -182,7 +203,10 @@ Remove uma instância existente.
 ```json
 {
     "status_code": 0,
-    "status_string": "Instância excluída com sucesso"
+    "status_string": {
+        "message": "Instance deleted successfully!",
+        "api_response": "Resposta da API específica"
+    }
 }
 ```
 
@@ -216,7 +240,10 @@ Desconecta uma instância sem excluí-la.
 ```json
 {
     "status_code": 0,
-    "status_string": "Instância desconectada com sucesso"
+    "status_string": {
+        "message": "Instance deleted successfully!",
+        "api_response": "Resposta da API específica"
+    }
 }
 ```
 
@@ -252,7 +279,10 @@ Configura ou atualiza a URL do webhook para uma instância existente.
 ```json
 {
     "status_code": 0,
-    "status_string": "Webhook configurado com sucesso"
+    "status_string": {
+        "message": "Instance deleted successfully!",
+        "api_response": "Resposta da API específica"
+    }
 }
 ```
 
@@ -271,20 +301,31 @@ Endpoint para processar notificações recebidas de uma instância.
 
 **Parâmetros de Requisição:**
 
-| Campo | Tipo | Obrigatório | Descrição |
-|-------|------|-------------|-----------|
-| instance_id | String | Sim | Identificador da instância que está gerando o evento |
-| ... | ... | ... | Outros campos dependem do tipo de evento |
+O formato do webhook varia dependendo da API utilizada:
 
-**Exemplo de Requisição:**
+**Para Evolution API:**
 ```json
 {
-    "instance_id": "instance001",
     "event": "message",
+    "instance": "instance001",
     "data": {
+        "instanceId": "instance001",
         "message": "Olá!",
         "from": "5511999999999",
         "timestamp": 1623456789
+    }
+}
+```
+
+**Para WuzAPI:**
+```json
+{
+    "type": "message",
+    "token": "instance001",
+    "instance_name": "Cliente A",
+    "data": {
+        "message": "Olá!",
+        "from": "5511999999999"
     }
 }
 ```
@@ -293,7 +334,10 @@ Endpoint para processar notificações recebidas de uma instância.
 ```json
 {
     "status_code": 0,
-    "status_string": "Webhook processado com sucesso"
+    "status_string": {
+        "webhook": "Webhook sent successfully!",
+        "api_response": "Resposta da API específica"
+    }
 }
 ```
 
@@ -306,8 +350,21 @@ Endpoint para processar notificações recebidas de uma instância.
 
 O servidor é configurado para executar no IP e porta definidos no código. Por padrão:
 
-- IP: 0.0.0.0
+- IP: 0.0.0.0 (aceita conexões de qualquer endereço)
 - Porta: 8080
+
+## Tipos de Mídia Suportados
+
+A API suporta os seguintes tipos de mídia:
+
+- **TEXT**: Mensagens de texto simples
+- **IMAGE**: Imagens (URLs de imagens)
+- **AUDIO**: Arquivos de áudio (URLs de áudio)
+
+## Tipos de API Suportados
+
+- **EVOLUTION**: Evolution API
+- **WUZAPI**: WuzAPI
 
 ## Tratamento de Erros
 
@@ -317,9 +374,23 @@ Todas as solicitações são validadas e os erros tratados adequadamente. Possí
 - Instância não encontrada
 - Falha na conexão com a API
 - Erro ao processar a mensagem
+- Tipo de API inválido
+- Tipo de mídia inválido
 
 ## Tratamento Automático de Webhooks
 
-O sistema inclui suporte básico para tratamento automático de webhooks, permitindo o encaminhamento de eventos recebidos das APIs para URLs configuradas pelo usuário. Ao criar uma instância com um `webhook_url`, os eventos de mensagens e status serão automaticamente encaminhados para esta URL.
+O sistema inclui suporte completo para tratamento automático de webhooks, permitindo o encaminhamento de eventos recebidos das APIs para URLs configuradas pelo usuário. Ao criar uma instância com um `webhook_url`, os eventos de mensagens e status serão automaticamente encaminhados para esta URL.
 
 O formato dos webhooks encaminhados segue o padrão da API utilizada (EVOLUTION ou WUZAPI), permitindo uma integração transparente com sistemas existentes.
+
+## Logs e Monitoramento
+
+O sistema utiliza logging detalhado para monitoramento e debugging:
+
+- Logs de requisições recebidas
+- Logs de operações de instâncias
+- Logs de envio de mensagens
+- Logs de erros e exceções
+- Logs de webhooks processados
+
+Os logs são salvos em arquivos separados para facilitar o troubleshooting e monitoramento do sistema.
