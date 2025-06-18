@@ -1,19 +1,26 @@
 #include "database.h"
+#include "logger/logger.h"
 #include <sstream>
 
+Logger apiLogger("logs/api.log");
+
 Status Database::connect(const std::string& db_url) {
+    apiLogger.debug("Tentando conectar ao banco de dados");
     Status stat;
     try {
         c = std::make_unique<pqxx::connection>(db_url);
         if (!c->is_open()) {
+            apiLogger.error("Falha ao abrir conexão com o banco de dados");
             stat.status_code = c_status::ERR;
             stat.status_string = "Failed to open DB connection";
             return stat;
         }
+        apiLogger.info("Conexão com banco de dados estabelecida com sucesso");
         stat.status_code = c_status::OK;
         stat.status_string = "DB connection opened successfully!";
         return stat;
     } catch (const std::exception& e) {
+        apiLogger.error("Erro na conexão com banco de dados: " + std::string(e.what()));
         stat.status_code = c_status::ERR;
         std::stringstream ss;
         ss << "Connection error: " << e.what();
@@ -23,10 +30,11 @@ Status Database::connect(const std::string& db_url) {
 }
 
 std::optional<Database::Instance> Database::fetchInstance(const std::string& instance_id) const {
+    apiLogger.debug("Buscando instância: " + instance_id);
     try {
         Instance inst;
         if (!c || !c->is_open()) {
-            std::cerr << "DB connection is not open, returning nullopt...\n";
+            apiLogger.error("Conexão com banco de dados não está aberta");
             return std::nullopt;
         }
         pqxx::work wrk(*c);
@@ -36,6 +44,7 @@ std::optional<Database::Instance> Database::fetchInstance(const std::string& ins
         );
         wrk.commit();
         if (res.empty()) {
+            apiLogger.debug("Instância não encontrada: " + instance_id);
             return std::nullopt;
         }
         const pqxx::row& r = res[0];
@@ -44,17 +53,20 @@ std::optional<Database::Instance> Database::fetchInstance(const std::string& ins
         inst.instance_type = r[2].as<std::string>();
         inst.is_active = r[3].as<bool>();
         inst.webhook_url = r[4].as<std::string>();
+        apiLogger.debug("Instância encontrada: " + inst.instance_name);
         return inst;
     } catch (const std::exception& e) {
-        std::cerr << e.what() << std::endl;
+        apiLogger.error("Erro ao buscar instância: " + std::string(e.what()));
         return std::nullopt;
     }
 }
 
 Status Database::insertInstance(const std::string &instance_id, const std::string &instance_name, const ApiType &instance_type, std::optional<std::string> webhook_url) {
+    apiLogger.info("Inserindo nova instância: " + instance_id + " (" + instance_name + ")");
     Status stat;
     try {
         if (!c || !c->is_open()) {
+            apiLogger.error("Conexão com banco de dados não está aberta");
             stat.status_string = "DB connection is not open, returning error...\n";
             stat.status_code = c_status::ERR;
             return stat;
@@ -85,15 +97,18 @@ Status Database::insertInstance(const std::string &instance_id, const std::strin
         }
         wrk.commit();
         if (res.empty()) {
+            apiLogger.error("Falha ao inserir instância no banco de dados");
             stat.status_string = "Couldn't insert the instance into the db...\n";
             stat.status_code = c_status::ERR;
             return stat;
         }
+        apiLogger.info("Instância inserida com sucesso: " + instance_id);
         stat.status_code = c_status::OK;
         stat.status_string = "Successfully inserted instance into the db!\n";
         return stat;
 
     } catch (const std::exception& e) {
+        apiLogger.error("Erro ao inserir instância: " + std::string(e.what()));
         stat.status_string = e.what();
         stat.status_code = c_status::ERR;
         return stat;
@@ -133,32 +148,30 @@ Status Database::insertLog(const std::string& log_level, const std::string& log_
 }
 
 Status Database::deleteInstance(const std::string &instance_id) {
+    apiLogger.info("Iniciando exclusão da instância: " + instance_id);
     Status stat;
     try {
         if (!c || !c->is_open()) {
+            apiLogger.error("Conexão com banco de dados não está aberta");
             stat.status_string = "DB connection is not open, returning error...\n";
             stat.status_code = c_status::ERR;
             return stat;
         }
 
-        std::cout << "Iniciando exclusão da instância principal com ID: " << instance_id << std::endl;
-
         pqxx::work wrk(*c);
         std::string query = "DELETE FROM instances WHERE instance_id = " + wrk.quote(instance_id);
+        apiLogger.debug("Executando query: " + query);
 
-        std::cout << "Executando SQL: " << query << std::endl;
         pqxx::result res = wrk.exec(query);
-        std::cout << "Operação DELETE concluída" << std::endl;
-
         wrk.commit();
-        std::cout << "Transação finalizada com sucesso" << std::endl;
 
+        apiLogger.info("Instância excluída com sucesso: " + instance_id);
         stat.status_code = c_status::OK;
         stat.status_string = "Successfully deleted the instance from the db!\n";
         return stat;
 
     } catch (const std::exception& e) {
-        std::cerr << "Erro na exclusão da instância principal: " << e.what() << std::endl;
+        apiLogger.error("Erro ao excluir instância: " + std::string(e.what()));
         stat.status_string = e.what();
         stat.status_code = c_status::ERR;
         return stat;

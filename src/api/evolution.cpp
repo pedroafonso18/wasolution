@@ -1,13 +1,19 @@
 #include "evolution.h"
-
+#include "logger/logger.h"
 #include "config/config.h"
 using std::string;
 
+Logger apiLogger("logs/api.log");
+
 Evolution::Proxy Evolution::ParseProxy(std::string proxy_url) {
+    apiLogger.debug("Analisando URL do proxy: " + proxy_url);
     Proxy proxy = {"", "", "", "", ""};
     try {
         size_t proto_end = proxy_url.find("://");
-        if (proto_end == std::string::npos) return proxy;
+        if (proto_end == std::string::npos) {
+            apiLogger.error("URL do proxy inválida: protocolo não encontrado");
+            return proxy;
+        }
         proxy.protocol = proxy_url.substr(0, proto_end);
 
         size_t creds_start = proto_end + 3;
@@ -45,24 +51,27 @@ Evolution::Proxy Evolution::ParseProxy(std::string proxy_url) {
                 proxy.host = proxy_url.substr(host_start);
             }
         }
+        apiLogger.debug("Proxy analisado com sucesso: " + proxy.protocol + "://" + proxy.host + ":" + proxy.port);
     } catch (...) {
+        apiLogger.error("Erro ao analisar URL do proxy");
         return Proxy{"", "", "", "", ""};
     }
     return proxy;
 }
 
 Status Evolution::sendMessage_e(string phone, string token, string url, MediaType type, string msg_template, string instance_name) {
+    apiLogger.info("Enviando mensagem para número: " + phone + " via Evolution");
     CURL* curl = curl_easy_init();
     std::string responseBody;
     Status stat;
     if (!curl) {
+        apiLogger.error("Falha ao inicializar CURL");
         stat.status_code = c_status::ERR;
         stat.status_string = nlohmann::json{{"error", "Failed to initialize CURL"}};
         return stat;
     }
     string req_url;
     string req_body;
-    std::cout << "Starting operation to send message for Evolution - Sending message to number - " << phone << '\n';
     if (type == MediaType::TEXT) {
         req_url = std::format("{}/message/sendText/{}", url, instance_name);
         req_body = std::format(R"({{"number" : "{}", "text" : "{}"}})", phone, msg_template);
@@ -73,9 +82,8 @@ Status Evolution::sendMessage_e(string phone, string token, string url, MediaTyp
         req_url = std::format("{}/message/sendMedia/{}", url, instance_name);
         req_body = std::format(R"({{"number" : "{}", "media" : "{}", "mediatype" : "image", "mimetype" : "image/png", "caption": "", "fileName" : "imagem.png"}})", phone, msg_template);
     }
-    std::cout << "BODY and URL constructed successfully!\n";
-    std::cout << "BODY: " << req_body << '\n';
-    std::cout << "URL: " << req_url << '\n';
+    apiLogger.debug("URL da requisição: " + req_url);
+    apiLogger.debug("Corpo da requisição: " + req_body);
 
     struct curl_slist *headers = nullptr;
     const string authorization = std::format("apikey: {}", token);
@@ -91,6 +99,7 @@ Status Evolution::sendMessage_e(string phone, string token, string url, MediaTyp
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &responseBody);
 
     if (const CURLcode res = curl_easy_perform(curl); res != CURLE_OK) {
+        apiLogger.error("Erro CURL: " + std::string(curl_easy_strerror(res)));
         curl_slist_free_all(headers);
         curl_easy_cleanup(curl);
         stat.status_code = c_status::ERR;
@@ -99,6 +108,7 @@ Status Evolution::sendMessage_e(string phone, string token, string url, MediaTyp
     }
 
     bool http_ok = isHttpResponseOk(curl);
+    apiLogger.debug("Resposta HTTP: " + responseBody);
 
     curl_slist_free_all(headers);
     curl_easy_cleanup(curl);
@@ -107,6 +117,7 @@ Status Evolution::sendMessage_e(string phone, string token, string url, MediaTyp
         nlohmann::json response = nlohmann::json::parse(responseBody);
 
         if (!http_ok) {
+            apiLogger.error("Erro HTTP ao enviar mensagem");
             stat.status_code = c_status::ERR;
             stat.status_string = response;
             if (!response.contains("error")) {
@@ -114,10 +125,12 @@ Status Evolution::sendMessage_e(string phone, string token, string url, MediaTyp
                 stat.status_string = response;
             }
         } else {
+            apiLogger.info("Mensagem enviada com sucesso");
             stat.status_code = c_status::OK;
             stat.status_string = response;
         }
     } catch (const std::exception& e) {
+        apiLogger.error("Erro ao processar resposta do envio: " + std::string(e.what()));
         if (!http_ok) {
             stat.status_code = c_status::ERR;
             stat.status_string = nlohmann::json{
@@ -136,6 +149,7 @@ Status Evolution::sendMessage_e(string phone, string token, string url, MediaTyp
 }
 
 Status Evolution::createInstance_e(string evo_token, string inst_token, string inst_name, string url, string webhook_url, std::string proxy_url) {
+    apiLogger.info("Criando instância Evolution: " + inst_name);
     CURL *curl = curl_easy_init();
     std::string responseBody;
     Config cfg;
@@ -143,6 +157,7 @@ Status Evolution::createInstance_e(string evo_token, string inst_token, string i
     Status stat;
     Proxy prox = ParseProxy(proxy_url);
     if (!curl) {
+        apiLogger.error("Falha ao inicializar CURL");
         stat.status_code = c_status::ERR;
         stat.status_string = nlohmann::json{{"error", "Failed to initialize CURL"}};
         return stat;
@@ -158,9 +173,8 @@ Status Evolution::createInstance_e(string evo_token, string inst_token, string i
     } else if (prox.host.empty() && webhook_url.empty()) {
         req_body = std::format(R"({{"instanceName" : "{}","token" : "{}", "integration": "WHATSAPP-BAILEYS"}})", inst_name, inst_token);
     }
-    std::cout << "BODY and URL constructed successfully!\n";
-    std::cout << "BODY: " << req_body << '\n';
-    std::cout << "URL: " << req_url << '\n';
+    apiLogger.debug("URL da requisição: " + req_url);
+    apiLogger.debug("Corpo da requisição: " + req_body);
 
     struct curl_slist *headers = nullptr;
     const string authorization = std::format("apikey: {}", evo_token);
@@ -177,7 +191,7 @@ Status Evolution::createInstance_e(string evo_token, string inst_token, string i
     curl_easy_setopt(curl, CURLOPT_POSTFIELDS, req_body.c_str());
 
     if (const CURLcode res = curl_easy_perform(curl); res != CURLE_OK) {
-        std::cerr << "CURL error: " <<  curl_easy_strerror(res) << '\n';
+        apiLogger.error("Erro CURL: " + std::string(curl_easy_strerror(res)));
         curl_slist_free_all(headers);
         curl_easy_cleanup(curl);
         stat.status_code = c_status::ERR;
@@ -186,6 +200,7 @@ Status Evolution::createInstance_e(string evo_token, string inst_token, string i
     }
 
     bool http_ok = isHttpResponseOk(curl);
+    apiLogger.debug("Resposta HTTP: " + responseBody);
 
     curl_slist_free_all(headers);
     curl_easy_cleanup(curl);
@@ -194,6 +209,7 @@ Status Evolution::createInstance_e(string evo_token, string inst_token, string i
         nlohmann::json response = nlohmann::json::parse(responseBody);
 
         if (!http_ok) {
+            apiLogger.error("Erro HTTP ao criar instância");
             stat.status_code = c_status::ERR;
             stat.status_string = response;
             if (!response.contains("error")) {
@@ -201,10 +217,12 @@ Status Evolution::createInstance_e(string evo_token, string inst_token, string i
                 stat.status_string = response;
             }
         } else {
+            apiLogger.info("Instância criada com sucesso");
             stat.status_code = c_status::OK;
             stat.status_string = response;
         }
     } catch (const std::exception& e) {
+        apiLogger.error("Erro ao processar resposta da criação: " + std::string(e.what()));
         if (!http_ok) {
             stat.status_code = c_status::ERR;
             stat.status_string = nlohmann::json{
@@ -221,23 +239,20 @@ Status Evolution::createInstance_e(string evo_token, string inst_token, string i
 
     return stat;
 }
-
 
 Status Evolution::deleteInstance_e(string inst_token, string evo_token, string url) {
+    apiLogger.info("Deletando instância Evolution");
     CURL *curl = curl_easy_init();
     std::string responseBody;
     Status stat;
-
     if (!curl) {
+        apiLogger.error("Falha ao inicializar CURL");
         stat.status_code = c_status::ERR;
         stat.status_string = nlohmann::json{{"error", "Failed to initialize CURL"}};
         return stat;
     }
-
-    const string req_url = std::format("{}/instance/delete/{}", url, inst_token);
-
-    std::cout << "URL constructed successfully!\n";
-    std::cout << "URL: " << req_url << '\n';
+    const string req_url = std::format("{}/instance/logout/{}", url, inst_token);
+    apiLogger.debug("URL da requisição: " + req_url);
 
     struct curl_slist *headers = nullptr;
     const string authorization = std::format("apikey: {}", evo_token);
@@ -245,14 +260,15 @@ Status Evolution::deleteInstance_e(string inst_token, string evo_token, string u
     headers = curl_slist_append(headers, authorization.c_str());
     headers = curl_slist_append(headers, "Content-Type: application/json");
     headers = curl_slist_append(headers, "accept: application/json");
+
     curl_easy_setopt(curl, CURLOPT_URL, req_url.c_str());
-    curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "DELETE");
-    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &responseBody);
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+    curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "DELETE");
 
     if (const CURLcode res = curl_easy_perform(curl); res != CURLE_OK) {
-        std::cerr << "CURL error: " <<  curl_easy_strerror(res) << '\n';
+        apiLogger.error("Erro CURL: " + std::string(curl_easy_strerror(res)));
         curl_slist_free_all(headers);
         curl_easy_cleanup(curl);
         stat.status_code = c_status::ERR;
@@ -261,6 +277,7 @@ Status Evolution::deleteInstance_e(string inst_token, string evo_token, string u
     }
 
     bool http_ok = isHttpResponseOk(curl);
+    apiLogger.debug("Resposta HTTP: " + responseBody);
 
     curl_slist_free_all(headers);
     curl_easy_cleanup(curl);
@@ -269,6 +286,7 @@ Status Evolution::deleteInstance_e(string inst_token, string evo_token, string u
         nlohmann::json response = nlohmann::json::parse(responseBody);
 
         if (!http_ok) {
+            apiLogger.error("Erro HTTP ao deletar instância");
             stat.status_code = c_status::ERR;
             stat.status_string = response;
             if (!response.contains("error")) {
@@ -276,10 +294,12 @@ Status Evolution::deleteInstance_e(string inst_token, string evo_token, string u
                 stat.status_string = response;
             }
         } else {
+            apiLogger.info("Instância deletada com sucesso");
             stat.status_code = c_status::OK;
             stat.status_string = response;
         }
     } catch (const std::exception& e) {
+        apiLogger.error("Erro ao processar resposta da deleção: " + std::string(e.what()));
         if (!http_ok) {
             stat.status_code = c_status::ERR;
             stat.status_string = nlohmann::json{
@@ -297,18 +317,19 @@ Status Evolution::deleteInstance_e(string inst_token, string evo_token, string u
     return stat;
 }
 
-Status Evolution::connectInstance_e(const string& inst_token, const string &evo_url, const string& evo_token) {
+Status Evolution::connectInstance_e(string inst_token, string evo_token, string url) {
+    apiLogger.info("Conectando instância Evolution");
     CURL *curl = curl_easy_init();
     std::string responseBody;
     Status stat;
     if (!curl) {
+        apiLogger.error("Falha ao inicializar CURL");
         stat.status_code = c_status::ERR;
         stat.status_string = nlohmann::json{{"error", "Failed to initialize CURL"}};
         return stat;
     }
-    const string req_url = std::format("{}/instance/connect/{}", evo_url, inst_token);
-    std::cout << "URL constructed successfully!\n";
-    std::cout << "URL: " << req_url << '\n';
+    const string req_url = std::format("{}/instance/connect/{}", url, inst_token);
+    apiLogger.debug("URL da requisição: " + req_url);
 
     struct curl_slist *headers = nullptr;
     const string authorization = std::format("apikey: {}", evo_token);
@@ -318,14 +339,13 @@ Status Evolution::connectInstance_e(const string& inst_token, const string &evo_
     headers = curl_slist_append(headers, "accept: application/json");
 
     curl_easy_setopt(curl, CURLOPT_URL, req_url.c_str());
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &responseBody);
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
     curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "GET");
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
-    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &responseBody);
 
     if (const CURLcode res = curl_easy_perform(curl); res != CURLE_OK) {
-        std::cerr << "CURL error: " <<  curl_easy_strerror(res) << '\n';
+        apiLogger.error("Erro CURL: " + std::string(curl_easy_strerror(res)));
         curl_slist_free_all(headers);
         curl_easy_cleanup(curl);
         stat.status_code = c_status::ERR;
@@ -334,6 +354,7 @@ Status Evolution::connectInstance_e(const string& inst_token, const string &evo_
     }
 
     bool http_ok = isHttpResponseOk(curl);
+    apiLogger.debug("Resposta HTTP: " + responseBody);
 
     curl_slist_free_all(headers);
     curl_easy_cleanup(curl);
@@ -342,6 +363,7 @@ Status Evolution::connectInstance_e(const string& inst_token, const string &evo_
         nlohmann::json response = nlohmann::json::parse(responseBody);
 
         if (!http_ok) {
+            apiLogger.error("Erro HTTP ao conectar instância");
             stat.status_code = c_status::ERR;
             stat.status_string = response;
             if (!response.contains("error")) {
@@ -349,10 +371,12 @@ Status Evolution::connectInstance_e(const string& inst_token, const string &evo_
                 stat.status_string = response;
             }
         } else {
+            apiLogger.info("Instância conectada com sucesso");
             stat.status_code = c_status::OK;
             stat.status_string = response;
         }
     } catch (const std::exception& e) {
+        apiLogger.error("Erro ao processar resposta da conexão: " + std::string(e.what()));
         if (!http_ok) {
             stat.status_code = c_status::ERR;
             stat.status_string = nlohmann::json{
@@ -523,4 +547,17 @@ Status Evolution::setWebhook_e(string token, string webhook_url, string url, str
     std::cout << stat.status_string << '\n';
 
     return stat;
+}
+
+bool Evolution::isHttpResponseOk(CURL* curl) {
+    long http_code = 0;
+    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
+    apiLogger.debug("Código de resposta HTTP: " + std::to_string(http_code));
+    return http_code >= 200 && http_code < 300;
+}
+
+size_t Evolution::WriteCallback(void* contents, size_t size, size_t nmemb, std::string* userp) {
+    size_t realsize = size * nmemb;
+    userp->append((char*)contents, realsize);
+    return realsize;
 }

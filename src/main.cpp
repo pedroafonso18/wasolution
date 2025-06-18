@@ -10,13 +10,18 @@
 #include <thread>
 #include "handler/handler.h"
 #include "../dependencies/json.h"
+#include "logger/logger.h"
 
 namespace beast = boost::beast;
 namespace http = beast::http;
 namespace net = boost::asio;
 using tcp = net::ip::tcp;
 
+Logger apiLogger("logs/api.log");
+
 http::response<http::string_body> handle_request(http::request<http::string_body> const& req) {
+    apiLogger.info("Requisição recebida: " + std::string(req.method_string()) + " " + std::string(req.target()));
+
     if (req.method() == http::verb::post && req.target() == "/createInstance") {
         Config cfg;
         auto env = cfg.getEnv();
@@ -31,12 +36,16 @@ http::response<http::string_body> handle_request(http::request<http::string_body
             std::string api_type_str = body.at("api_type").get<std::string>();
             std::string webhook_url = body.value("webhook_url", env.default_webhook);
             std::string proxy_url = body.value("proxy_url", "");
+
+            apiLogger.debug("Criando instância: ID=" + instance_id + ", Nome=" + instance_name + ", Tipo=" + api_type_str);
+
             ApiType api_type;
             if (api_type_str == "EVOLUTION") {
                 api_type = ApiType::EVOLUTION;
             } else if (api_type_str == "WUZAPI") {
                 api_type = ApiType::WUZAPI;
             } else {
+                apiLogger.error("Tipo de API inválido: " + api_type_str);
                 res.result(http::status::bad_request);
                 res.body() = R"({\"error\":\"api_type inválido\"})";
                 res.prepare_payload();
@@ -53,6 +62,7 @@ http::response<http::string_body> handle_request(http::request<http::string_body
                 res.result(http::status::internal_server_error);
             }
         } catch (const std::exception& e) {
+            apiLogger.error("Erro ao processar requisição createInstance: " + std::string(e.what()));
             res.result(http::status::bad_request);
             nlohmann::json err_json;
             err_json["error"] = e.what();
@@ -72,6 +82,9 @@ http::response<http::string_body> handle_request(http::request<http::string_body
             std::string number = body.at("number").get<std::string>();
             std::string msg_body = body.at("body").get<std::string>();
             std::string type_str = body.value("type", "TEXT");
+
+            apiLogger.debug("Enviando mensagem: Instância=" + instance_id + ", Número=" + number + ", Tipo=" + type_str);
+
             MediaType type;
             if (type_str == "TEXT") {
                 type = MediaType::TEXT;
@@ -80,6 +93,7 @@ http::response<http::string_body> handle_request(http::request<http::string_body
             } else if (type_str == "AUDIO") {
                 type = MediaType::AUDIO;
             } else {
+                apiLogger.error("Tipo de mídia inválido: " + type_str);
                 res.result(http::status::bad_request);
                 res.body() = R"({\"error\":\"type inválido\"})";
                 res.prepare_payload();
@@ -289,7 +303,10 @@ private:
         auto self(shared_from_this());
         http::async_read(socket_, buffer_, req_, [this, self](beast::error_code ec, std::size_t) {
             if (!ec) {
+                apiLogger.debug("Requisição recebida: " + std::string(req_.method_string()) + " " + std::string(req_.target()));
                 do_write(handle_request(req_));
+            } else {
+                apiLogger.error("Erro ao ler requisição: " + std::string(ec.message()));
             }
         });
     }
@@ -298,6 +315,9 @@ private:
         auto self(shared_from_this());
         auto sp = std::make_shared<http::response<http::string_body>>(std::move(res));
         http::async_write(socket_, *sp, [this, self, sp](beast::error_code ec, std::size_t) {
+            if (ec) {
+                apiLogger.error("Erro ao escrever resposta: " + std::string(ec.message()));
+            }
             socket_.shutdown(tcp::socket::shutdown_send, ec);
         });
     }
@@ -314,27 +334,28 @@ public:
 
         acceptor_.open(endpoint.protocol(), ec);
         if (ec) {
-            std::cerr << "Open error: " << ec.message() << std::endl;
+            apiLogger.error("Erro ao abrir acceptor: " + std::string(ec.message()));
             return;
         }
 
         acceptor_.set_option(net::socket_base::reuse_address(true), ec);
         if (ec) {
-            std::cerr << "Set option error: " << ec.message() << std::endl;
+            apiLogger.error("Erro ao configurar opção do socket: " + std::string(ec.message()));
             return;
         }
 
         acceptor_.bind(endpoint, ec);
         if (ec) {
-            std::cerr << "Bind error: " << ec.message() << std::endl;
+            apiLogger.error("Erro ao fazer bind: " + std::string(ec.message()));
             return;
         }
 
         acceptor_.listen(net::socket_base::max_listen_connections, ec);
         if (ec) {
-            std::cerr << "Listen error: " << ec.message() << std::endl;
+            apiLogger.error("Erro ao iniciar listen: " + std::string(ec.message()));
             return;
         }
+        apiLogger.info("Listener configurado com sucesso");
     }
 
     void run() {
@@ -354,24 +375,31 @@ private:
 
 int main() {
     try {
+        apiLogger.info("Iniciando servidor...");
         auto const address = net::ip::make_address(IP);
+        apiLogger.info("Endereço IP configurado: " + std::string(IP));
 
         const int threads = std::thread::hardware_concurrency();
+        apiLogger.info("Número de threads: " + std::to_string(threads));
         net::io_context ioc{threads};
 
         auto listener = std::make_shared<Listener>(ioc, tcp::endpoint{address, PORT});
+        apiLogger.info("Listener criado na porta: " + std::to_string(PORT));
         listener->run();
 
         std::vector<std::thread> thread_pool;
         for (int i = 0; i < threads; ++i) {
             thread_pool.emplace_back([&ioc] { ioc.run(); });
         }
+        apiLogger.info("Thread pool iniciado");
 
         for (auto& t : thread_pool) {
             t.join();
         }
+        apiLogger.info("Thread pool finalizado");
 
     } catch (const std::exception& e) {
+        apiLogger.error("Erro fatal: " + std::string(e.what()));
         std::cerr << "Error: " << e.what() << std::endl;
     }
 }

@@ -1,18 +1,21 @@
 #include "wuzapi.h"
-
+#include "logger/logger.h"
 #include <thread>
 
 #include "config/config.h"
 #include "database/database.h"
 using std::string;
 
+Logger apiLogger("logs/api.log");
 
 Status Wuzapi::setProxy_w(string token, string proxy_url, string url) {
+    apiLogger.info("Configurando proxy para instância: " + token);
     CURL *curl = curl_easy_init();
     std::string responseBody;
     Status stat;
 
     if (!curl) {
+        apiLogger.error("Falha ao inicializar CURL");
         stat.status_code = c_status::ERR;
         stat.status_string = nlohmann::json{{"error", "Failed to initialize CURL"}};
         return stat;
@@ -21,9 +24,8 @@ Status Wuzapi::setProxy_w(string token, string proxy_url, string url) {
     const string req_url = std::format("{}/proxy", url);
     string req_hdr = std::format("token: {}", token);
     string req_body = std::format(R"({{"proxy_url": "{}", "enable": true}})", proxy_url);
-    std::cout << "BODY and URL constructed successfully!\n";
-    std::cout << "BODY: " << req_body << '\n';
-    std::cout << "URL: " << req_url << '\n';
+    apiLogger.debug("URL da requisição: " + req_url);
+    apiLogger.debug("Corpo da requisição: " + req_body);
 
     struct curl_slist *headers = nullptr;
     headers = curl_slist_append(headers, "Content-Type: application/json");
@@ -38,7 +40,7 @@ Status Wuzapi::setProxy_w(string token, string proxy_url, string url) {
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &responseBody);
 
     if (const CURLcode res = curl_easy_perform(curl); res != CURLE_OK) {
-        std::cerr << "CURL error: " <<  curl_easy_strerror(res) << '\n';
+        apiLogger.error("Erro CURL: " + std::string(curl_easy_strerror(res)));
         curl_slist_free_all(headers);
         curl_easy_cleanup(curl);
         stat.status_code = c_status::ERR;
@@ -47,6 +49,7 @@ Status Wuzapi::setProxy_w(string token, string proxy_url, string url) {
     }
 
     bool http_ok = isHttpResponseOk(curl);
+    apiLogger.debug("Resposta HTTP: " + responseBody);
 
     curl_slist_free_all(headers);
     curl_easy_cleanup(curl);
@@ -55,6 +58,7 @@ Status Wuzapi::setProxy_w(string token, string proxy_url, string url) {
         nlohmann::json response = nlohmann::json::parse(responseBody);
 
         if (!http_ok) {
+            apiLogger.error("Erro HTTP na configuração do proxy");
             stat.status_code = c_status::ERR;
             stat.status_string = response;
             if (!response.contains("error")) {
@@ -62,10 +66,12 @@ Status Wuzapi::setProxy_w(string token, string proxy_url, string url) {
                 stat.status_string = response;
             }
         } else {
+            apiLogger.info("Proxy configurado com sucesso");
             stat.status_code = c_status::OK;
             stat.status_string = response;
         }
     } catch (const std::exception& e) {
+        apiLogger.error("Erro ao processar resposta do proxy: " + std::string(e.what()));
         if (!http_ok) {
             stat.status_code = c_status::ERR;
             stat.status_string = nlohmann::json{
@@ -84,11 +90,13 @@ Status Wuzapi::setProxy_w(string token, string proxy_url, string url) {
 }
 
 Status Wuzapi::getQrCode_w(string token, string url) {
+    apiLogger.info("Buscando QR Code para instância: " + token);
     CURL *curl = curl_easy_init();
     std::string responseBody;
     Status stat;
 
     if (!curl) {
+        apiLogger.error("Falha ao inicializar CURL");
         stat.status_code = c_status::ERR;
         stat.status_string = nlohmann::json{{"error", "Failed to initialize CURL"}};
         return stat;
@@ -96,8 +104,7 @@ Status Wuzapi::getQrCode_w(string token, string url) {
 
     const string req_url = std::format("{}/session/qr", url);
     string req_hdr = std::format("token: {}", token);
-    std::cout << "URL constructed successfully!\n";
-    std::cout << "URL: " << req_url << '\n';
+    apiLogger.debug("URL da requisição: " + req_url);
 
     struct curl_slist *headers = nullptr;
     headers = curl_slist_append(headers, "Content-Type: application/json");
@@ -111,7 +118,7 @@ Status Wuzapi::getQrCode_w(string token, string url) {
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &responseBody);
 
     if (const CURLcode res = curl_easy_perform(curl); res != CURLE_OK) {
-        std::cerr << "CURL error: " <<  curl_easy_strerror(res) << '\n';
+        apiLogger.error("Erro CURL: " + std::string(curl_easy_strerror(res)));
         curl_slist_free_all(headers);
         curl_easy_cleanup(curl);
         stat.status_code = c_status::ERR;
@@ -120,15 +127,16 @@ Status Wuzapi::getQrCode_w(string token, string url) {
     }
 
     bool http_ok = isHttpResponseOk(curl);
+    apiLogger.debug("Resposta HTTP: " + responseBody);
 
     curl_slist_free_all(headers);
     curl_easy_cleanup(curl);
 
     try {
         nlohmann::json response = nlohmann::json::parse(responseBody);
-        std::cout << "Resposta recebida da API: " << responseBody << std::endl;
 
         if (!http_ok) {
+            apiLogger.error("Erro HTTP ao buscar QR Code");
             stat.status_code = c_status::ERR;
             stat.status_string = response;
             if (!response.contains("error")) {
@@ -141,47 +149,39 @@ Status Wuzapi::getQrCode_w(string token, string url) {
         stat.status_code = c_status::OK;
         stat.status_string = response;
 
-        std::cout << "Estrutura da resposta: ";
-        for (auto& [key, value] : response.items()) {
-            std::cout << "Chave: " << key << ", ";
-        }
-        std::cout << std::endl;
-
         bool needQrFromDb = false;
 
         if (response.contains("data") && response["data"].is_object() &&
             response["data"].contains("QRCode") &&
             (response["data"]["QRCode"].empty() || response["data"]["QRCode"] == "")) {
-            std::cout << "Caso 1: QRCode vazio encontrado em data.QRCode" << std::endl;
+            apiLogger.debug("QRCode vazio encontrado na resposta da API");
             needQrFromDb = true;
         }
 
         if (needQrFromDb) {
-            std::cout << "QR Code não encontrado ou vazio na resposta da API, buscando no banco de dados...\n";
+            apiLogger.info("Buscando QR Code no banco de dados");
             Config cfg;
             Database db;
             auto db_url = cfg.getEnv().db_url_wuz;
-            std::cout << "Conectando ao banco de dados com URL: " << db_url << std::endl;
 
             if (db.connect(db_url).status_code != c_status::OK) {
-                std::cerr << "Falha ao conectar ao banco de dados\n";
+                apiLogger.error("Falha ao conectar ao banco de dados");
                 return stat;
             }
 
-            std::cout << "Aguardando 500ms antes de buscar o QR Code..." << std::endl;
+            apiLogger.debug("Aguardando 500ms antes de buscar o QR Code");
             std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
-            std::cout << "Buscando QR Code para o token: " << token << std::endl;
             auto qrCode = db.getQrCodeFromDB(token);
 
             if (!qrCode.has_value() || qrCode->empty()) {
-                std::cout << "QR Code não encontrado ou vazio no banco, aguardando mais 1.5 segundos e tentando novamente..." << std::endl;
+                apiLogger.debug("QR Code não encontrado, aguardando mais 1.5 segundos");
                 std::this_thread::sleep_for(std::chrono::milliseconds(1500));
                 qrCode = db.getQrCodeFromDB(token);
             }
 
             if (qrCode.has_value() && !qrCode->empty()) {
-                std::cout << "QR Code válido encontrado no banco de dados!\n";
+                apiLogger.info("QR Code encontrado no banco de dados");
 
                 if (response.contains("data") && response["data"].is_object()) {
                     if (response["data"].contains("QRCode")) {
@@ -194,16 +194,14 @@ Status Wuzapi::getQrCode_w(string token, string url) {
                 }
 
                 stat.status_string = response;
-                std::cout << "Resposta modificada com QR Code do banco: " << response.dump() << std::endl;
             } else {
-                std::cerr << "Não foi possível encontrar um QR Code válido no banco de dados para o token: " << token << "\n";
-                std::cerr << "O QR Code pode estar vazio ou ainda não ter sido gerado completamente.\n";
+                apiLogger.error("QR Code não encontrado no banco de dados para o token: " + token);
             }
         } else {
-            std::cout << "QR Code já presente na resposta ou estrutura não reconhecida. Sem necessidade de buscar no banco.\n";
+            apiLogger.info("QR Code já presente na resposta da API");
         }
     } catch (const std::exception& e) {
-        std::cerr << "Exceção ao processar resposta: " << e.what() << std::endl;
+        apiLogger.error("Erro ao processar resposta do QR Code: " + std::string(e.what()));
         if (!http_ok) {
             stat.status_code = c_status::ERR;
             stat.status_string = nlohmann::json{
@@ -221,8 +219,6 @@ Status Wuzapi::getQrCode_w(string token, string url) {
 
     return stat;
 }
-
-
 
 Status Wuzapi::setWebhook_w(string token, string webhook_url, string url) {
     CURL *curl = curl_easy_init();
@@ -304,20 +300,20 @@ Status Wuzapi::setWebhook_w(string token, string webhook_url, string url) {
     return stat;
 }
 
-
 Status Wuzapi::sendMessage_w(string phone, string token, string url, MediaType type, string msg_template) {
+    apiLogger.info("Enviando mensagem para número: " + phone);
     CURL* curl = curl_easy_init();
     std::string responseBody;
     Status stat;
 
     if (!curl) {
+        apiLogger.error("Falha ao inicializar CURL");
         stat.status_code = c_status::ERR;
         stat.status_string = nlohmann::json{{"error", "Failed to initialize CURL"}};
         return stat;
     }
     string req_url;
     string req_body;
-    std::cout << "Starting operation to send message for Wuzapi - Sending message to number - " << phone << '\n';
     if (type == MediaType::TEXT) {
         req_url = std::format("{}/chat/send/text", url);
         req_body = std::format(R"({{"Phone": "{}", "Body": "{}"}})", phone, msg_template);
@@ -329,9 +325,8 @@ Status Wuzapi::sendMessage_w(string phone, string token, string url, MediaType t
         req_body = std::format(R"({{"Phone": "{}", "Image": "{}", "Caption" : ""}})", phone, msg_template);
     }
 
-    std::cout << "BODY and URL constructed successfully!\n";
-    std::cout << "BODY: " << req_body << '\n';
-    std::cout << "URL: " << req_url << '\n';
+    apiLogger.debug("URL da requisição: " + req_url);
+    apiLogger.debug("Corpo da requisição: " + req_body);
 
     struct curl_slist *headers = nullptr;
     string authorization = std::format("token: {}", token);
@@ -347,7 +342,7 @@ Status Wuzapi::sendMessage_w(string phone, string token, string url, MediaType t
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &responseBody);
 
     if (const CURLcode res = curl_easy_perform(curl); res != CURLE_OK) {
-        std::cerr << "CURL error: " <<  curl_easy_strerror(res) << '\n';
+        apiLogger.error("Erro CURL: " + std::string(curl_easy_strerror(res)));
         curl_slist_free_all(headers);
         curl_easy_cleanup(curl);
         stat.status_code = c_status::ERR;
@@ -356,6 +351,7 @@ Status Wuzapi::sendMessage_w(string phone, string token, string url, MediaType t
     }
 
     bool http_ok = isHttpResponseOk(curl);
+    apiLogger.debug("Resposta HTTP: " + responseBody);
 
     curl_slist_free_all(headers);
     curl_easy_cleanup(curl);
@@ -364,6 +360,7 @@ Status Wuzapi::sendMessage_w(string phone, string token, string url, MediaType t
         nlohmann::json response = nlohmann::json::parse(responseBody);
 
         if (!http_ok) {
+            apiLogger.error("Erro HTTP ao enviar mensagem");
             stat.status_code = c_status::ERR;
             stat.status_string = response;
             if (!response.contains("error")) {
@@ -371,10 +368,12 @@ Status Wuzapi::sendMessage_w(string phone, string token, string url, MediaType t
                 stat.status_string = response;
             }
         } else {
+            apiLogger.info("Mensagem enviada com sucesso");
             stat.status_code = c_status::OK;
             stat.status_string = response;
         }
     } catch (const std::exception& e) {
+        apiLogger.error("Erro ao processar resposta do envio: " + std::string(e.what()));
         if (!http_ok) {
             stat.status_code = c_status::ERR;
             stat.status_string = nlohmann::json{
