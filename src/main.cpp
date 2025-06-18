@@ -229,33 +229,7 @@ http::response<http::string_body> handle_request(http::request<http::string_body
 
         try {
             auto body = nlohmann::json::parse(req.body());
-            std::string instance_id;
-
-            if (body.contains("event") && body.contains("instance") && body.contains("data")) {
-                if (body["data"].contains("instanceId")) {
-                    instance_id = body["data"]["instanceId"];
-                } else if (body.contains("instance")) {
-                    instance_id = body["instance"];
-                } else {
-                    res.result(http::status::bad_request);
-                    res.body() = R"({"error":"Webhook da Evolution sem instanceId válido"})";
-                    res.prepare_payload();
-                    return res;
-                }
-            } else if (body.contains("type") && body.contains("token") && body.contains("instance_name")) {
-                instance_id = body["token"];
-            } else if (body.contains("instance_id")) {
-                instance_id = body.at("instance_id").get<std::string>();
-            } else {
-                res.result(http::status::bad_request);
-                res.body() = R"({"error":"Formato de webhook desconhecido"})";
-                res.prepare_payload();
-                return res;
-            }
-
-            std::cerr << "Webhook recebido para instance_id: " << instance_id << std::endl;
-
-            Status stat = Handler::sendWebhook(body, instance_id);
+            Status stat = Handler::sendWebhook(body);
             nlohmann::json resp_json;
             resp_json["status_code"] = stat.status_code;
             resp_json["status_string"] = stat.status_string;

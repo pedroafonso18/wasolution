@@ -30,8 +30,7 @@ set(SOURCES
     src/config/config.cpp
     src/database/database.cpp
     src/handler/handler.cpp
-    src/webhook/webhook_constant.h
-    src/webhook/webhook.cpp
+        src/webhook/webhook.cpp
     src/logger/logger.cpp
 )
 
