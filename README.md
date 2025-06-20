@@ -32,6 +32,8 @@ WASolution é uma API wrapper que unifica as funcionalidades das APIs Evolution 
 - Postgres
 
 ## 🔧 Instalação
+
+### Instalação Tradicional
 1. Clone o repositório:
 ```bash
 git clone https://github.com/pedroafonso18/wasolution.git
@@ -49,6 +51,24 @@ cmake ..
 ```bash
 make
 ```
+
+### 🐳 Deploy com Docker (Recomendado)
+Para uma instalação mais simples e isolada, use Docker:
+
+```bash
+# Clone o repositório
+git clone https://github.com/pedroafonso18/wasolution.git
+cd wasolution
+
+# Configure as variáveis de ambiente
+cp .env.example .env
+# Edite o arquivo .env com suas configurações
+
+# Build e execute com Docker Compose
+docker-compose up --build
+```
+
+📖 **Documentação completa do Docker**: [Guia de Deploy com Docker](docs/docker-deploy.md)
 
 ## 🚀 Como Usar
 1. Configure as variáveis de ambiente necessárias (ver seção de configuração)
