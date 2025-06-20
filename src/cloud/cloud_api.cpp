@@ -283,3 +283,90 @@ Status Cloud::registerNumber(std::string waba_id, std::string access_token) {
         return stat;
     }
 }
+
+Status Cloud::sendMessage(std::string instance_id, std::string receiver, std::string body, MediaType m_type, std::string phone_number_id, std::string access_token) {
+    apiLogger.info("Enviando mensagem com instância:: " + instance_id);
+    CURL *curl = curl_easy_init();
+    std::string responseBody;
+    Status stat;
+    if (!curl) {
+        apiLogger.error("Falha ao inicializar CURL");
+        stat.status_code = c_status::ERR;
+        stat.status_string = nlohmann::json{{"error", "Failed to initialize CURL"}};
+        return stat;
+    }
+    string req_body;
+    const string req_url = std::format("https://graph.facebook.com/{}/{}/messages", CLOUD_VERSION, phone_number_id );
+    if (m_type == MediaType::TEXT) {
+    req_body = std::format(R"({{"messaging_product" : "whatsapp","recipient_type" : "individual", "to": "{}", "type" : "text", "text": {{"preview_url" : false, "body" : "{}"}} }})", receiver, body);
+    } else if (m_type == MediaType::AUDIO) {
+        req_body = std::format(R"({{"messaging_product" : "whatsapp","recipient_type" : "individual", "to": "{}", "type" : "audio", "audio": {{"link" : "{}"}} }})", receiver, body);
+    } else if (m_type == MediaType::IMAGE) {
+        req_body = std::format(R"({{"messaging_product" : "whatsapp","recipient_type" : "individual", "to": "{}", "type" : "image", "image": {{"link" : "{}"}} }})", receiver, body);
+    }
+    apiLogger.debug("URL da requisição: " + req_url);
+    apiLogger.debug("Corpo da requisição: " + req_body);
+
+    struct curl_slist *headers = nullptr;
+    const string authorization = std::format("Authorization: bearer {}", access_token);
+
+    headers = curl_slist_append(headers, authorization.c_str());
+    headers = curl_slist_append(headers, "Content-Type: application/json");
+    headers = curl_slist_append(headers, "accept: application/json");
+
+    curl_easy_setopt(curl, CURLOPT_URL, req_url.c_str());
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &responseBody);
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+    curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "POST");
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, req_body.c_str());
+
+    if (const CURLcode res = curl_easy_perform(curl); res != CURLE_OK) {
+        apiLogger.error("Erro CURL: " + std::string(curl_easy_strerror(res)));
+        curl_slist_free_all(headers);
+        curl_easy_cleanup(curl);
+        stat.status_code = c_status::ERR;
+        stat.status_string = nlohmann::json{{"error", curl_easy_strerror(res)}};
+        return stat;
+    }
+
+    bool http_ok = isHttpResponseOk(curl);
+    apiLogger.debug("Resposta HTTP: " + responseBody);
+
+    curl_slist_free_all(headers);
+    curl_easy_cleanup(curl);
+
+    try {
+        nlohmann::json response = nlohmann::json::parse(responseBody);
+
+        if (!http_ok) {
+            apiLogger.error("Erro HTTP ao criar instância");
+            stat.status_code = c_status::ERR;
+            stat.status_string = response;
+            if (!response.contains("error")) {
+                response["error"] = "Servidor retornou código de erro HTTP";
+                stat.status_string = response;
+            }
+        } else {
+            apiLogger.info("Instância criada com sucesso");
+            stat.status_code = c_status::OK;
+            stat.status_string = response;
+        }
+    } catch (const std::exception& e) {
+        apiLogger.error("Erro ao processar resposta da criação: " + std::string(e.what()));
+        if (!http_ok) {
+            stat.status_code = c_status::ERR;
+            stat.status_string = nlohmann::json{
+                {"error", "Erro no servidor remoto"},
+                {"raw_response", responseBody}
+            };
+        } else {
+            stat.status_code = c_status::OK;
+            stat.status_string = nlohmann::json{
+                {"raw_response", responseBody}
+            };
+        }
+    }
+
+    return stat;
+}

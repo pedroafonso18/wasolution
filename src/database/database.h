@@ -15,6 +15,8 @@ public:
         std::string instance_type;
         bool is_active;
         std::optional<std::string> webhook_url;
+        std::optional<std::string> waba_id;
+        std::optional<std::string> access_token;
     } Instance;
 
     //TODO: Adicionar função para mudar o is_active para true e false.
@@ -26,7 +28,7 @@ public:
     Status deleteInstance(const std::string& instance_id);
     std::optional<std::string> getQrCodeFromDB(const std::string& token) const;
     /* Some Wuzapi operations have to be done directly on the database, if someone
-       with more knowledge about the api can fix this, i'd be glad to remove any
+       with more knowledge about the api can fix this, I'd be glad to remove any
        api code from the database class.*/
     Status createInstance_w(std::string inst_token, std::string inst_name);
     Status insertWebhook_w(std::string inst_token, std::string webhook_url);

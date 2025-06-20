@@ -39,7 +39,7 @@ std::optional<Database::Instance> Database::fetchInstance(const std::string& ins
         }
         pqxx::work wrk(*c);
         pqxx::result res = wrk.exec(
-            "SELECT instance_id, name, instance_type, is_active, webhook_url FROM instances WHERE instance_id = " +
+            "SELECT instance_id, name, instance_type, is_active, webhook_url, waba_id, access_token FROM instances WHERE instance_id = " +
             wrk.quote(instance_id) + " LIMIT 1"
         );
         wrk.commit();
@@ -53,6 +53,8 @@ std::optional<Database::Instance> Database::fetchInstance(const std::string& ins
         inst.instance_type = r[2].as<std::string>();
         inst.is_active = r[3].as<bool>();
         inst.webhook_url = r[4].as<std::string>();
+        inst.waba_id = r[5].as<std::string>();
+        inst.access_token = r[6].as<std::string>();
         apiLogger.debug("Instância encontrada: " + inst.instance_name);
         return inst;
     } catch (const std::exception& e) {
