@@ -103,13 +103,13 @@ Status Database::insertInstance(const std::string &instance_id, const std::strin
         if (token.has_value()) {
             columns += ", access_token";
             values += ", " + wrk.quote(token.value());
-            apiLogger.debug("Incluindo ACCESS_TOKEN na inserção: " + waba_id.value());
+            apiLogger.debug("Incluindo ACCESS_TOKEN na inserção: " + (token.has_value() ? token.value() : "null"));
         }
 
         if (phone_number_id.has_value()) {
             columns += ", phone_number_id";
-            values += ", " + wrk.quote(token.value());
-            apiLogger.debug("Incluindo PHONE_NUMBER_ID na inserção: " + waba_id.value());
+            values += ", " + wrk.quote(phone_number_id.value());
+            apiLogger.debug("Incluindo PHONE_NUMBER_ID na inserção: " + phone_number_id.value());
         }
 
         res = wrk.exec(
