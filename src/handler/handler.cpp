@@ -1,4 +1,6 @@
 #include "handler.h"
+
+#include "cloud/cloud_api.h"
 #include "logger/logger.h"
 
 using std::string;
@@ -69,6 +71,25 @@ Status Handler::sendMessage(const string &instance_id, string number, string bod
             }
             return stat;
         }
+    } else if (inst.value().instance_type == "CLOUD") {
+        apiLogger.info("Enviando mensagem via CLOUD");
+        snd = Cloud::sendMessage(instance_id, number, body, type, inst.value().phone_number_id.value(), inst.value().access_token.value());
+        if (snd.status_code == c_status::ERR) {
+            apiLogger.error("Erro ao enviar mensagem via CLOUD: " + snd.status_string.dump());
+            return snd;
+        } else {
+            apiLogger.info("Mensagem enviada com sucesso via CLOUD");
+            stat.status_code = c_status::OK;
+            try {
+                stat.status_string = nlohmann::json::parse(snd.status_string.dump());
+            } catch (const std::exception& e) {
+                stat.status_string = nlohmann::json{
+                        {"message", "Successfully sent the message!"},
+                        {"api_response", snd.status_string}
+                };
+            }
+            return stat;
+        }
     }
     apiLogger.error("Tipo de API desconhecido para instância: " + instance_id);
     stat.status_code = c_status::ERR;
@@ -76,7 +97,7 @@ Status Handler::sendMessage(const string &instance_id, string number, string bod
     return stat;
 }
 
-Status Handler::createInstance(const string &instance_id, const string &instance_name, ApiType api_type, std::string webhook_url, std::string proxy_url) {
+Status Handler::createInstance(const string &instance_id, const string &instance_name, ApiType api_type, std::string webhook_url, std::string proxy_url, std::string access_token, std::string waba_id) {
     apiLogger.info("Iniciando criação de instância: " + instance_id + " (" + instance_name + ")");
     Config config;
     Database db;
@@ -91,7 +112,11 @@ Status Handler::createInstance(const string &instance_id, const string &instance
     } else if (api_type == ApiType::WUZAPI) {
         apiLogger.info("Criando instância WuzAPI");
         api_response = Wuzapi::createInstance_w(instance_id, instance_name, env.wuz_url, web_url, proxy_url, env.wuz_admin_token);
-    } else {
+    } else if (api_type == ApiType::CLOUD) {
+        apiLogger.info("Criando instância Cloud");
+        api_response = Cloud::registerNumber(waba_id, access_token);
+    }
+    else {
         apiLogger.error("Tipo de API desconhecido");
         stat.status_code = c_status::ERR;
         stat.status_string = nlohmann::json{{"error", "Unknown API, please choose between EVOLUTION and WUZAPI"}};
@@ -105,7 +130,14 @@ Status Handler::createInstance(const string &instance_id, const string &instance
         apiLogger.error("Erro ao conectar ao banco principal: " + connection.status_string.dump());
         return connection;
     }
-    auto insertion = db.insertInstance(instance_id, instance_name, api_type, webhook_url);
+    std::string phone_number_id;
+    if (api_response.status_string.contains("id") && api_response.status_string.contains("data") && !api_response.status_string["data"].empty() &&
+        !api_response.status_string["data"][0]["id"].empty()) {
+        phone_number_id = api_response.status_string["data"][0]["id"];
+    } else {
+        phone_number_id = "";
+    }
+    auto insertion = db.insertInstance(instance_id, instance_name, api_type, webhook_url, waba_id, access_token, phone_number_id);
     if (insertion.status_code == c_status::ERR) {
         apiLogger.error("Erro ao inserir instância no banco principal: " + insertion.status_string.dump());
         return insertion;

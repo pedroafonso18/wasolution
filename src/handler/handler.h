@@ -16,7 +16,7 @@ class Handler {
         Handler() = delete;
 
         static Status sendMessage(const string &instance_id, string number, string body, MediaType type);
-        static Status createInstance(const string &instance_id, const string &instance_name, ApiType api_type, std::string webhook_url, std::string proxy_url);
+        static Status createInstance(const string &instance_id, const string &instance_name, ApiType api_type, std::string webhook_url, std::string proxy_url, std::string access_token, std::string waba_id);
         static Status deleteInstance(string instance_id);
         static Status connectInstance(string instance_id);
         static Status logoutInstance(string instance_id);

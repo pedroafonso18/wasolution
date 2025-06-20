@@ -17,13 +17,14 @@ public:
         std::optional<std::string> webhook_url;
         std::optional<std::string> waba_id;
         std::optional<std::string> access_token;
+        std::optional<std::string> phone_number_id;
     } Instance;
 
     //TODO: Adicionar função para mudar o is_active para true e false.
     Database() = default;
     Status connect(const std::string& db_url);
     std::optional<Instance> fetchInstance(const std::string& instance_id) const;
-    Status insertInstance(const std::string& instance_id, const std::string& instance_name, const ApiType& instance_type, std::optional<std::string> webhook_url, std::optional<std::string> waba_id, std::optional<std::string> token);
+    Status insertInstance(const std::string& instance_id, const std::string& instance_name, const ApiType& instance_type, std::optional<std::string> webhook_url, std::optional<std::string> waba_id, std::optional<std::string> token, std::optional<std::string> phone_number_id);
     Status insertLog(const std::string& log_level, const std::string& log_text) const;
     Status deleteInstance(const std::string& instance_id);
     std::optional<std::string> getQrCodeFromDB(const std::string& token) const;

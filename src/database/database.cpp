@@ -63,7 +63,7 @@ std::optional<Database::Instance> Database::fetchInstance(const std::string& ins
     }
 }
 
-Status Database::insertInstance(const std::string &instance_id, const std::string &instance_name, const ApiType &instance_type, std::optional<std::string> webhook_url, std::optional<std::string> waba_id, std::optional<std::string> token) {
+Status Database::insertInstance(const std::string &instance_id, const std::string &instance_name, const ApiType &instance_type, std::optional<std::string> webhook_url, std::optional<std::string> waba_id, std::optional<std::string> token, std::optional<std::string> phone_number_id) {
     apiLogger.info("Inserindo nova instância: " + instance_id + " (" + instance_name + ")");
     Status stat;
     try {
@@ -104,6 +104,12 @@ Status Database::insertInstance(const std::string &instance_id, const std::strin
             columns += ", access_token";
             values += ", " + wrk.quote(token.value());
             apiLogger.debug("Incluindo ACCESS_TOKEN na inserção: " + waba_id.value());
+        }
+
+        if (phone_number_id.has_value()) {
+            columns += ", phone_number_id";
+            values += ", " + wrk.quote(token.value());
+            apiLogger.debug("Incluindo PHONE_NUMBER_ID na inserção: " + waba_id.value());
         }
 
         res = wrk.exec(

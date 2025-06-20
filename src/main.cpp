@@ -11,6 +11,7 @@
 #include "handler/handler.h"
 #include "../dependencies/json.h"
 #include "logger/logger.h"
+#include "cloud/cloud_api.h"
 
 namespace beast = boost::beast;
 namespace http = beast::http;
@@ -50,6 +51,8 @@ http::response<http::string_body> handle_request(http::request<http::string_body
             std::string api_type_str = body.at("api_type").get<std::string>();
             std::string webhook_url = body.value("webhook_url", env.default_webhook);
             std::string proxy_url = body.value("proxy_url", "");
+            std::string access_token = body.value("access_token", "");
+            std::string waba_id = body.value("waba_id", "");
 
             apiLogger.debug("Criando instância: ID=" + instance_id + ", Nome=" + instance_name + ", Tipo=" + api_type_str);
 
@@ -58,6 +61,8 @@ http::response<http::string_body> handle_request(http::request<http::string_body
                 api_type = ApiType::EVOLUTION;
             } else if (api_type_str == "WUZAPI") {
                 api_type = ApiType::WUZAPI;
+            } else if (api_type_str == "CLOUD") {
+                api_type = ApiType::CLOUD;
             } else {
                 apiLogger.error("Tipo de API inválido: " + api_type_str);
                 res.result(http::status::bad_request);
@@ -65,8 +70,7 @@ http::response<http::string_body> handle_request(http::request<http::string_body
                 res.prepare_payload();
                 return res;
             }
-
-            Status stat = Handler::createInstance(instance_id, instance_name, api_type, webhook_url, proxy_url);
+            Status stat = Handler::createInstance(instance_id, instance_name, api_type, webhook_url, proxy_url, access_token, waba_id);
             nlohmann::json resp_json;
             resp_json["status_code"] = stat.status_code;
             resp_json["status_string"] = stat.status_string;
