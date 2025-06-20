@@ -4,6 +4,7 @@
 
 #define PORT 8080
 #define IP "0.0.0.0"
+#define TOKEN "ABCD1234"
 
 enum class MediaType {
     IMAGE,

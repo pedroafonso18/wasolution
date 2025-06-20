@@ -22,6 +22,20 @@ Logger apiLogger("../logs/api.log");
 http::response<http::string_body> handle_request(http::request<http::string_body> const& req) {
     apiLogger.info("Requisição recebida: " + std::string(req.method_string()) + " " + std::string(req.target()));
 
+    auto auth_iter = req.find(http::field::authorization);
+    if (auth_iter == req.end() || auth_iter->value() != "Bearer " + std::string(TOKEN)) {
+        apiLogger.error("Acesso não autorizado - Token inválido ou ausente");
+        http::response<http::string_body> res{http::status::unauthorized, req.version()};
+        res.set(http::field::server, "Beast");
+        res.set(http::field::content_type, "application/json");
+        res.keep_alive(req.keep_alive());
+        nlohmann::json err_json;
+        err_json["error"] = "Não autorizado";
+        res.body() = err_json.dump();
+        res.prepare_payload();
+        return res;
+    }
+
     if (req.method() == http::verb::post && req.target() == "/createInstance") {
         Config cfg;
         auto env = cfg.getEnv();
