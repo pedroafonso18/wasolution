@@ -11,4 +11,5 @@ private:
     static Status registerPhoneNumber_(std::string phone_number_id, std::string access_token);
 public:
     static Status registerNumber(std::string waba_id, std::string access_token);
+    static Status sendMessage(std::string instance_id, )
 };

@@ -61,7 +61,7 @@ std::optional<Database::Instance> Database::fetchInstance(const std::string& ins
     }
 }
 
-Status Database::insertInstance(const std::string &instance_id, const std::string &instance_name, const ApiType &instance_type, std::optional<std::string> webhook_url) {
+Status Database::insertInstance(const std::string &instance_id, const std::string &instance_name, const ApiType &instance_type, std::optional<std::string> webhook_url, std::optional<std::string> waba_id, std::optional<std::string> token) {
     apiLogger.info("Inserindo nova instância: " + instance_id + " (" + instance_name + ")");
     Status stat;
     try {
@@ -76,25 +76,38 @@ Status Database::insertInstance(const std::string &instance_id, const std::strin
             inst_type = "EVOLUTION";
         } else if (instance_type == ApiType::WUZAPI) {
             inst_type = "WUZAPI";
+        } else if (instance_type == ApiType::CLOUD) {
+            inst_type = "CLOUD";
         }
         pqxx::result res;
         pqxx::work wrk(*c);
-        if (!webhook_url.has_value()) {
-            res = wrk.exec(
-                "INSERT INTO instances (instance_id, name, instance_type, is_active) VALUES (" +
-                wrk.quote(instance_id) + ", " +
-                wrk.quote(instance_name) + ", " +
-                wrk.quote(inst_type) + ", true) RETURNING instance_id"
-            );
-        } else if (webhook_url.has_value()) {
-            res = wrk.exec(
-                "INSERT INTO instances (instance_id, name, webhook_url, instance_type, is_active) VALUES (" +
-                wrk.quote(instance_id) + ", " +
-                wrk.quote(instance_name) + ", " +
-                wrk.quote(webhook_url.value()) + ", " +
-                wrk.quote(inst_type) + ", true) RETURNING instance_id"
-            );
+
+        std::string columns = "instance_id, name, instance_type, is_active";
+        std::string values = wrk.quote(instance_id) + ", " +
+                             wrk.quote(instance_name) + ", " +
+                             wrk.quote(inst_type) + ", true";
+
+        if (webhook_url.has_value()) {
+            columns += ", webhook_url";
+            values += ", " + wrk.quote(webhook_url.value());
         }
+
+        if (waba_id.has_value()) {
+            columns += ", waba_id";
+            values += ", " + wrk.quote(waba_id.value());
+            apiLogger.debug("Incluindo WABA ID na inserção: " + waba_id.value());
+        }
+
+        if (token.has_value()) {
+            columns += ", access_token";
+            values += ", " + wrk.quote(token.value());
+            apiLogger.debug("Incluindo ACCESS_TOKEN na inserção: " + waba_id.value());
+        }
+
+        res = wrk.exec(
+            "INSERT INTO instances (" + columns + ") VALUES (" + values + ") RETURNING instance_id"
+        );
+
         wrk.commit();
         if (res.empty()) {
             apiLogger.error("Falha ao inserir instância no banco de dados");

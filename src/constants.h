@@ -14,7 +14,8 @@ enum class MediaType {
 
 enum class ApiType {
     EVOLUTION,
-    WUZAPI
+    WUZAPI,
+    CLOUD
 };
 
 enum class c_status {
