@@ -34,6 +34,7 @@ set(SOURCES
     src/logger/logger.cpp
         src/cloud/cloud_api.cpp
         src/cloud/cloud_api.h
+        src/cloud/cloud_constants.h
 )
 
 include_directories(
