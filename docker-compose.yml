@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+
+  wasolution:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: wasolution-app
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file:
+      - .env
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./logs:/app/logs
+    networks:
+      - wasolution-network
+    restart: unless-stopped
+
+networks:
+  wasolution-network:
+    driver: bridge 
