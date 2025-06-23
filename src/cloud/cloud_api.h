@@ -13,4 +13,5 @@ public:
     static Status registerNumber(std::string waba_id, std::string access_token);
     static Status sendMessage(std::string instance_id, std::string receiver, std::string body, MediaType m_type, std::string phone_number_id, std::string access_token);
     static Status registerTemplate(std::string access_token, Template template_, std::string inst_id, std::string waba_id);
+    static Status sendTemplate(std::string instance_id, std::string receiver, std::string body, MediaType m_type, std::string phone_number_id, std::string access_token, std::vector<FB_VARS> vars, std::string template_name);
 };

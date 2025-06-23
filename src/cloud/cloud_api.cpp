@@ -371,6 +371,199 @@ Status Cloud::sendMessage(std::string instance_id, std::string receiver, std::st
     return stat;
 }
 
+Status Cloud::sendTemplate(std::string instance_id, std::string receiver, std::string body, MediaType m_type, std::string phone_number_id, std::string access_token, std::vector<FB_VARS> vars, std::string template_name) {
+    apiLogger.info("Enviando template com instância:: " + instance_id);
+    CURL *curl = curl_easy_init();
+    std::string responseBody;
+    Status stat;
+    if (!curl) {
+        apiLogger.error("Falha ao inicializar CURL");
+        stat.status_code = c_status::ERR;
+        stat.status_string = nlohmann::json{{"error", "Failed to initialize CURL"}};
+        return stat;
+    }
+
+    nlohmann::json request_json = {
+        {"messaging_product", "whatsapp"},
+        {"recipient_type", "individual"},
+        {"to", receiver},
+        {"type", "template"},
+        {"template", {
+            {"name", template_name},
+            {"language", {{"code", "pt_BR"}}},
+            {"components", nlohmann::json::array()}
+        }}
+    };
+
+    if (m_type == MediaType::IMAGE) {
+        nlohmann::json header_component = {
+            {"type", "header"},
+            {"parameters", nlohmann::json::array({
+                {
+                    {"type", "image"},
+                    {"image", {
+                        {"link", body}
+                    }}
+                }
+            })}
+        };
+        request_json["template"]["components"].push_back(header_component);
+    }
+
+    if (!vars.empty()) {
+        nlohmann::json body_component = {
+            {"type", "body"},
+            {"parameters", nlohmann::json::array()}
+        };
+
+        for (const auto& var : vars) {
+            if (var.var == VARIABLE_T::TEXT) {
+                body_component["parameters"].push_back({
+                    {"type", "text"},
+                    {"text", var.body}
+                });
+            }
+            else if (var.var == VARIABLE_T::CURRENCY) {
+                try {
+                    std::string fallback_value;
+                    std::string code;
+                    int amount_1000;
+
+                    size_t colon_pos = var.body.find(':');
+                    if (colon_pos != std::string::npos) {
+                        code = var.body.substr(0, colon_pos);
+                        std::string amount_str = var.body.substr(colon_pos + 1);
+                        double amount = std::stod(amount_str);
+                        amount_1000 = static_cast<int>(amount * 1000);
+                        fallback_value = "$" + amount_str;
+                    } else {
+                        code = "BRL";
+                        amount_1000 = 0;
+                        fallback_value = "R$ 0.00";
+                    }
+
+                    body_component["parameters"].push_back({
+                        {"type", "currency"},
+                        {"currency", {
+                            {"fallback_value", fallback_value},
+                            {"code", code},
+                            {"amount_1000", amount_1000}
+                        }}
+                    });
+                }
+                catch (const std::exception& e) {
+                    apiLogger.error("Erro ao processar variável de moeda: " + std::string(e.what()));
+                }
+            }
+            else if (var.var == VARIABLE_T::DATE_TIME) {
+                try {
+                    std::string fallback_value = var.body;
+
+                    int year = 0, month = 0, day = 0, hour = 0, minute = 0;
+
+                    if (var.body.length() >= 10) {
+                        year = std::stoi(var.body.substr(0, 4));
+                        month = std::stoi(var.body.substr(5, 2));
+                        day = std::stoi(var.body.substr(8, 2));
+
+                        if (var.body.length() >= 16) {
+                            hour = std::stoi(var.body.substr(11, 2));
+                            minute = std::stoi(var.body.substr(14, 2));
+                        }
+                    }
+
+                    body_component["parameters"].push_back({
+                        {"type", "date_time"},
+                        {"date_time", {
+                            {"fallback_value", fallback_value},
+                            {"year", year},
+                            {"month", month},
+                            {"day_of_month", day},
+                            {"hour", hour},
+                            {"minute", minute},
+                            {"calendar", "GREGORIAN"}
+                        }}
+                    });
+                }
+                catch (const std::exception& e) {
+                    apiLogger.error("Erro ao processar variável de data: " + std::string(e.what()));
+                }
+            }
+        }
+
+        request_json["template"]["components"].push_back(body_component);
+    }
+
+    string req_body = request_json.dump();
+    const string req_url = std::format("https://graph.facebook.com/{}/{}/messages", CLOUD_VERSION, phone_number_id);
+
+    apiLogger.debug("URL da requisição: " + req_url);
+    apiLogger.debug("Corpo da requisição: " + req_body);
+
+    struct curl_slist *headers = nullptr;
+    const string authorization = std::format("Authorization: bearer {}", access_token);
+
+    headers = curl_slist_append(headers, authorization.c_str());
+    headers = curl_slist_append(headers, "Content-Type: application/json");
+    headers = curl_slist_append(headers, "accept: application/json");
+
+    curl_easy_setopt(curl, CURLOPT_URL, req_url.c_str());
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &responseBody);
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+    curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "POST");
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, req_body.c_str());
+
+    if (const CURLcode res = curl_easy_perform(curl); res != CURLE_OK) {
+        apiLogger.error("Erro CURL: " + std::string(curl_easy_strerror(res)));
+        curl_slist_free_all(headers);
+        curl_easy_cleanup(curl);
+        stat.status_code = c_status::ERR;
+        stat.status_string = nlohmann::json{{"error", curl_easy_strerror(res)}};
+        return stat;
+    }
+
+    bool http_ok = isHttpResponseOk(curl);
+    apiLogger.debug("Resposta HTTP: " + responseBody);
+
+    curl_slist_free_all(headers);
+    curl_easy_cleanup(curl);
+
+    try {
+        nlohmann::json response = nlohmann::json::parse(responseBody);
+
+        if (!http_ok) {
+            apiLogger.error("Erro HTTP ao enviar template");
+            stat.status_code = c_status::ERR;
+            stat.status_string = response;
+            if (!response.contains("error")) {
+                response["error"] = "Servidor retornou código de erro HTTP";
+                stat.status_string = response;
+            }
+        } else {
+            apiLogger.info("Template enviado com sucesso");
+            stat.status_code = c_status::OK;
+            stat.status_string = response;
+        }
+    } catch (const std::exception& e) {
+        apiLogger.error("Erro ao processar resposta do envio de template: " + std::string(e.what()));
+        if (!http_ok) {
+            stat.status_code = c_status::ERR;
+            stat.status_string = nlohmann::json{
+                {"error", "Erro no servidor remoto"},
+                {"raw_response", responseBody}
+            };
+        } else {
+            stat.status_code = c_status::OK;
+            stat.status_string = nlohmann::json{
+                {"raw_response", responseBody}
+            };
+        }
+    }
+
+    return stat;
+}
+
 Status Cloud::registerTemplate(std::string access_token, Template template_, std::string inst_id, std::string waba_id) {
     apiLogger.info("Registrando o template na instância: " + inst_id);
     CURL *curl = curl_easy_init();
@@ -520,7 +713,7 @@ Status Cloud::registerTemplate(std::string access_token, Template template_, std
         nlohmann::json response = nlohmann::json::parse(responseBody);
 
         if (!http_ok) {
-            apiLogger.error("Erro HTTP ao registrar o número na WABA");
+            apiLogger.error("Erro HTTP ao registrar o template");
             stat.status_code = c_status::ERR;
             stat.status_string = response;
             if (!response.contains("error")) {
@@ -533,7 +726,7 @@ Status Cloud::registerTemplate(std::string access_token, Template template_, std
             stat.status_string = response;
         }
     } catch (const std::exception& e) {
-        apiLogger.error("Erro ao processar registrar o número na WABA: " + std::string(e.what()));
+        apiLogger.error("Erro ao processar registrar o template: " + std::string(e.what()));
         if (!http_ok) {
             stat.status_code = c_status::ERR;
             stat.status_string = nlohmann::json{

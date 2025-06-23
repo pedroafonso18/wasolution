@@ -19,6 +19,12 @@ enum class HEADER_T {
     DOCUMENT
 };
 
+enum class VARIABLE_T {
+    TEXT,
+    CURRENCY,
+    DATE_TIME
+};
+
 typedef struct {
     HEADER_T header_type;
     std::string header_content;
@@ -42,4 +48,9 @@ typedef struct {
     TemplateType type;
     std::string name;
 } Template;
+
+typedef struct {
+    VARIABLE_T var;
+    std:: string body;
+} FB_VARS;
 
