@@ -7,6 +7,7 @@
 #include "../api/wuzapi.h"
 #include "../config/config.h"
 #include "../database/database.h"
+#include "../cloud/cloud_constants.h"
 
 using std::string;
 
@@ -23,4 +24,5 @@ class Handler {
         static Status sendWebhook(nlohmann::json webhook);
         static Status setWebhook(string token, string webhook_url);
         static std::vector<Database::Instance> retrieveInstances();
+        static Status sendTemplate(string instance_id, string number, string body, MediaType type, std::vector<FB_VARS> vars, std::string template_name);
 };

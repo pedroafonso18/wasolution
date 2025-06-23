@@ -47,9 +47,11 @@ Cria uma nova instância do WhatsApp para gerenciamento.
 |-------|------|-------------|-----------|
 | instance_id | String | Sim | Identificador único para a instância |
 | instance_name | String | Sim | Nome para exibição da instância |
-| api_type | String | Sim | Tipo de API a ser utilizada ("EVOLUTION" ou "WUZAPI") |
+| api_type | String | Sim | Tipo de API a ser utilizada ("EVOLUTION", "WUZAPI" ou "CLOUD") |
 | webhook_url | String | Não | URL para receber notificações de webhook (opcional) |
 | proxy_url | String | Não | URL do proxy para conexão (opcional) |
+| access_token | String | Não | Token de acesso para a API Cloud (obrigatório para api_type="CLOUD") |
+| waba_id | String | Não | ID do WhatsApp Business Account (obrigatório para api_type="CLOUD") |
 
 **Exemplo de Requisição:**
 ```json
@@ -59,6 +61,18 @@ Cria uma nova instância do WhatsApp para gerenciamento.
     "api_type": "EVOLUTION",
     "webhook_url": "https://seu-servidor.com/webhook",
     "proxy_url": ""
+}
+```
+
+**Exemplo de Requisição (Cloud API):**
+```json
+{
+    "instance_id": "instance001",
+    "instance_name": "Cliente A",
+    "api_type": "CLOUD",
+    "webhook_url": "https://seu-servidor.com/webhook",
+    "access_token": "EAAxxxxx",
+    "waba_id": "12345678901234567"
 }
 ```
 
@@ -188,7 +202,122 @@ Envia uma mensagem para um contato específico.
 - 400 Bad Request: Parâmetros inválidos ou ausentes
 - 500 Internal Server Error: Erro ao processar a requisição
 
-### 4. Excluir Instância
+### 4. Enviar Template
+
+Envia uma mensagem de template para um contato específico (disponível apenas para instâncias do tipo CLOUD).
+
+**Endpoint:** `/sendTemplate`  
+**Método:** POST  
+**Content-Type:** application/json
+
+**Parâmetros de Requisição:**
+
+| Campo | Tipo | Obrigatório | Descrição |
+|-------|------|-------------|-----------|
+| instance_id | String | Sim | Identificador da instância que enviará o template (deve ser do tipo CLOUD) |
+| number | String | Sim | Número de telefone do destinatário (formato internacional) |
+| template_name | String | Sim | Nome do template pré-aprovado no WhatsApp Cloud API |
+| image_url | String | Não | URL da imagem a ser incluída no cabeçalho do template (opcional) |
+| variables | Array | Não | Lista de variáveis a serem usadas no template (opcional) |
+
+**Formato das Variáveis:**
+
+Cada objeto no array `variables` deve conter:
+
+| Campo | Tipo | Obrigatório | Descrição |
+|-------|------|-------------|-----------|
+| type | String | Não | Tipo da variável: "text", "currency" ou "datetime". Padrão: "text" |
+| value | String | Sim | Valor da variável |
+
+**Exemplo de Requisição (Template Simples):**
+```json
+{
+    "instance_id": "cloud_instance",
+    "number": "5511999999999",
+    "template_name": "saudacao_simples"
+}
+```
+
+**Exemplo de Requisição (Template com Imagem):**
+```json
+{
+    "instance_id": "cloud_instance",
+    "number": "5511999999999",
+    "template_name": "promocao",
+    "image_url": "https://exemplo.com/imagem_promocao.jpg"
+}
+```
+
+**Exemplo de Requisição (Template com Variáveis):**
+```json
+{
+    "instance_id": "cloud_instance",
+    "number": "5511999999999",
+    "template_name": "confirmacao_pedido",
+    "variables": [
+        {
+            "type": "text",
+            "value": "João Silva"
+        },
+        {
+            "type": "text",
+            "value": "T-shirt Azul"
+        },
+        {
+            "type": "currency",
+            "value": "USD:75.99"
+        },
+        {
+            "type": "datetime",
+            "value": "2025-06-25 15:30"
+        }
+    ]
+}
+```
+
+**Exemplo de Resposta de Sucesso:**
+```json
+{
+    "status_code": 0,
+    "status_string": {
+        "messaging_product": "whatsapp",
+        "contacts": [
+            {
+                "input": "5511999999999",
+                "wa_id": "5511999999999"
+            }
+        ],
+        "messages": [
+            {
+                "id": "wamid.xxx"
+            }
+        ]
+    }
+}
+```
+
+**Exemplo de Resposta de Erro:**
+```json
+{
+    "status_code": 1,
+    "status_string": {
+        "error": "Instance type not compatible, should be CLOUD"
+    }
+}
+```
+
+**Códigos de Status HTTP:**
+- 200 OK: Requisição processada com sucesso
+- 400 Bad Request: Parâmetros inválidos ou ausentes
+- 500 Internal Server Error: Erro ao processar a requisição
+
+**Observações:**
+- Este endpoint só funciona com instâncias do tipo CLOUD.
+- Os templates precisam ser previamente aprovados no WhatsApp Cloud API.
+- Para variáveis do tipo "currency", o valor deve estar no formato "CÓDIGO_MOEDA:VALOR" (ex: "USD:75.99").
+- Para variáveis do tipo "datetime", o valor deve estar no formato "YYYY-MM-DD HH:MM" (ex: "2025-06-25 15:30").
+
+### 5. Excluir Instância
 
 Remove uma instância existente.
 
@@ -225,7 +354,7 @@ Remove uma instância existente.
 - 400 Bad Request: Parâmetros inválidos ou ausentes
 - 500 Internal Server Error: Erro ao processar a requisição
 
-### 5. Desconectar Instância
+### 6. Desconectar Instância
 
 Desconecta uma instância sem excluí-la.
 
@@ -262,7 +391,7 @@ Desconecta uma instância sem excluí-la.
 - 400 Bad Request: Parâmetros inválidos ou ausentes
 - 500 Internal Server Error: Erro ao processar a requisição
 
-### 6. Configurar Webhook
+### 7. Configurar Webhook
 
 Configura ou atualiza a URL do webhook para uma instância existente.
 
@@ -301,7 +430,7 @@ Configura ou atualiza a URL do webhook para uma instância existente.
 - 400 Bad Request: Parâmetros inválidos ou ausentes
 - 500 Internal Server Error: Erro ao processar a requisição
 
-### 7. Webhook
+### 8. Webhook
 
 Endpoint para processar notificações recebidas de uma instância.
 
@@ -356,7 +485,7 @@ O formato do webhook varia dependendo da API utilizada:
 - 400 Bad Request: Parâmetros inválidos ou ausentes
 - 500 Internal Server Error: Erro ao processar a requisição
 
-### 8. Listar Instâncias
+### 9. Listar Instâncias
 
 Retorna a lista de todas as instâncias cadastradas no sistema.
 
@@ -385,6 +514,16 @@ Retorna a lista de todas as instâncias cadastradas no sistema.
       "instance_type": "WUZAPI",
       "is_active": false,
       "webhook_url": "https://exemplo.com/webhook2"
+    },
+    {
+      "instance_id": "instance003",
+      "instance_name": "Cliente C",
+      "instance_type": "CLOUD",
+      "is_active": true,
+      "webhook_url": "https://exemplo.com/webhook3",
+      "waba_id": "12345678901234567",
+      "access_token": "EAAxxxxx",
+      "phone_number_id": "987654321"
     }
   ]
 }
@@ -423,6 +562,15 @@ A API suporta os seguintes tipos de mídia:
 
 - **EVOLUTION**: Evolution API
 - **WUZAPI**: WuzAPI
+- **CLOUD**: WhatsApp Cloud API (suporta templates)
+
+## Variáveis de Template
+
+Para uso com o endpoint `/sendTemplate`, são suportados os seguintes tipos de variáveis:
+
+- **text**: Texto simples
+- **currency**: Valores monetários (formato: "CÓDIGO_MOEDA:VALOR")
+- **datetime**: Data e hora (formato: "YYYY-MM-DD HH:MM")
 
 ## Tratamento de Erros
 
@@ -434,12 +582,14 @@ Todas as solicitações são validadas e os erros tratados adequadamente. Possí
 - Erro ao processar a mensagem
 - Tipo de API inválido
 - Tipo de mídia inválido
+- Template não encontrado
+- Formato inválido para variáveis de template
 
 ## Tratamento Automático de Webhooks
 
 O sistema inclui suporte completo para tratamento automático de webhooks, permitindo o encaminhamento de eventos recebidos das APIs para URLs configuradas pelo usuário. Ao criar uma instância com um `webhook_url`, os eventos de mensagens e status serão automaticamente encaminhados para esta URL.
 
-O formato dos webhooks encaminhados segue o padrão da API utilizada (EVOLUTION ou WUZAPI), permitindo uma integração transparente com sistemas existentes.
+O formato dos webhooks encaminhados segue o padrão da API utilizada (EVOLUTION, WUZAPI ou CLOUD), permitindo uma integração transparente com sistemas existentes.
 
 ## Logs e Monitoramento
 

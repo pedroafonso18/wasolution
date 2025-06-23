@@ -410,3 +410,53 @@ std::vector<Database::Instance> Handler::retrieveInstances() {
 
     return instances;
 }
+
+ Status Handler::sendTemplate(string instance_id, string number, string body, MediaType type, std::vector<FB_VARS> vars, std::string template_name) {
+    Database db;
+    Config cfg;
+    Status stat;
+    auto env = cfg.getEnv();
+
+    apiLogger.info("Sending template from instance: " + instance_id + " - Template: " + template_name);
+
+    auto connection = db.connect(env.db_url);
+    if (connection.status_code == c_status::ERR) {
+        apiLogger.error("Failed to connect to database: " + connection.status_string.dump());
+        return connection;
+    }
+
+    auto instance_opt = db.fetchInstance(instance_id);
+    if (!instance_opt.has_value()) {
+        apiLogger.error("Instance not found: " + instance_id);
+        stat.status_code = c_status::ERR;
+        stat.status_string = nlohmann::json{{"error", "Instance not found"}};
+        return stat;
+    }
+
+    auto instance = instance_opt.value();
+    if (instance.instance_type != "CLOUD") {
+        apiLogger.error("Instance type not compatible, should be CLOUD. Current: " + instance.instance_type);
+        stat.status_code = c_status::ERR;
+        stat.status_string = nlohmann::json{{"error", "Instance type not compatible, should be CLOUD"}};
+        return stat;
+    }
+
+    if (!instance.phone_number_id.has_value() || !instance.access_token.has_value()) {
+        apiLogger.error("Missing required fields for Cloud API (phone_number_id or access_token)");
+        stat.status_code = c_status::ERR;
+        stat.status_string = nlohmann::json{{"error", "Missing required Cloud API configuration"}};
+        return stat;
+    }
+
+    apiLogger.info("Sending template via Cloud API");
+    return Cloud::sendTemplate(
+        instance_id,
+        number,
+        body,
+        type,
+        instance.phone_number_id.value(),
+        instance.access_token.value(),
+        vars,
+        template_name
+    );
+}

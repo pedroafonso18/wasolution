@@ -322,6 +322,68 @@ http::response<http::string_body> handle_request(http::request<http::string_body
         res.prepare_payload();
         return res;
     }
+    if (req.method() == http::verb::post && req.target() == "/sendTemplate") {
+        http::response<http::string_body> res{http::status::ok, req.version()};
+        res.set(http::field::server, "Beast");
+        res.set(http::field::content_type, "application/json");
+        res.keep_alive(req.keep_alive());
+        try {
+            auto body = nlohmann::json::parse(req.body());
+            std::string instance_id = body.at("instance_id").get<std::string>();
+            std::string number = body.at("number").get<std::string>();
+            std::string template_name = body.at("template_name").get<std::string>();
+
+            std::string image_url = body.value("image_url", "");
+            MediaType type = MediaType::TEXT;
+            if (!image_url.empty()) {
+                type = MediaType::IMAGE;
+            }
+
+            std::vector<FB_VARS> variables;
+            if (body.contains("variables") && body["variables"].is_array()) {
+                for (const auto& var : body["variables"]) {
+                    FB_VARS fb_var;
+
+                    std::string var_type = var.value("type", "text");
+                    if (var_type == "text") {
+                        fb_var.var = VARIABLE_T::TEXT;
+                    } else if (var_type == "currency") {
+                        fb_var.var = VARIABLE_T::CURRENCY;
+                    } else if (var_type == "datetime") {
+                        fb_var.var = VARIABLE_T::DATE_TIME;
+                    } else {
+                        fb_var.var = VARIABLE_T::TEXT;
+                    }
+
+                    fb_var.body = var.at("value").get<std::string>();
+                    variables.push_back(fb_var);
+                }
+            }
+
+            apiLogger.debug("Sending template message: Instance=" + instance_id +
+                           ", Number=" + number +
+                           ", Template=" + template_name +
+                           ", Variables=" + std::to_string(variables.size()));
+
+            Status stat = Handler::sendTemplate(instance_id, number, image_url, type, variables, template_name);
+            nlohmann::json resp_json;
+            resp_json["status_code"] = stat.status_code;
+            resp_json["status_string"] = stat.status_string;
+            res.body() = resp_json.dump();
+
+            if (stat.status_code == c_status::ERR) {
+                res.result(http::status::internal_server_error);
+            }
+        } catch (const std::exception& e) {
+            apiLogger.error("Error processing sendTemplate request: " + std::string(e.what()));
+            res.result(http::status::bad_request);
+            nlohmann::json err_json;
+            err_json["error"] = e.what();
+            res.body() = err_json.dump();
+        }
+        res.prepare_payload();
+        return res;
+    }
     http::response<http::string_body> res{http::status::not_found, req.version()};
     res.set(http::field::server, "Beast");
     res.set(http::field::content_type, "application/json");
