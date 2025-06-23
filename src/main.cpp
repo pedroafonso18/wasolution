@@ -187,6 +187,61 @@ http::response<http::string_body> handle_request(http::request<http::string_body
         res.prepare_payload();
         return res;
     }
+    if (req.method() == http::verb::get && req.target() == "/retrieveInstances") {
+        http::response<http::string_body> res{http::status::ok, req.version()};
+        res.set(http::field::server, "Beast");
+        res.set(http::field::content_type, "application/json");
+        res.keep_alive(req.keep_alive());
+        try {
+            apiLogger.info("Processing retrieveInstances request");
+            auto instances = Handler::retrieveInstances();
+
+            nlohmann::json instances_array = nlohmann::json::array();
+            for (const auto& instance : instances) {
+                nlohmann::json instance_json = {
+                    {"instance_id", instance.instance_id},
+                    {"instance_name", instance.instance_name},
+                    {"instance_type", instance.instance_type},
+                    {"is_active", instance.is_active}
+                };
+
+                if (instance.webhook_url.has_value()) {
+                    instance_json["webhook_url"] = instance.webhook_url.value();
+                }
+                if (instance.waba_id.has_value()) {
+                    instance_json["waba_id"] = instance.waba_id.value();
+                }
+                if (instance.access_token.has_value()) {
+                    instance_json["access_token"] = instance.access_token.value();
+                }
+                if (instance.phone_number_id.has_value()) {
+                    instance_json["phone_number_id"] = instance.phone_number_id.value();
+                }
+
+                instances_array.push_back(instance_json);
+            }
+
+            nlohmann::json resp_json;
+            resp_json["status"] = "success";
+            resp_json["count"] = instances.size();
+            resp_json["instances"] = instances_array;
+
+            res.body() = resp_json.dump(2);
+            apiLogger.info("Retrieved " + std::to_string(instances.size()) + " instances");
+
+        } catch (const std::exception& e) {
+            apiLogger.error("Error processing retrieveInstances request: " + std::string(e.what()));
+            res.result(http::status::internal_server_error);
+            nlohmann::json err_json;
+            err_json["status"] = "error";
+            err_json["message"] = "Failed to retrieve instances";
+            err_json["error"] = e.what();
+            res.body() = err_json.dump();
+        }
+        res.prepare_payload();
+        return res;
+
+    }
     if (req.method() == http::verb::post && req.target() == "/connectInstance") {
         http::response<http::string_body> res{http::status::ok, req.version()};
         res.set(http::field::server, "Beast");

@@ -22,5 +22,5 @@ class Handler {
         static Status logoutInstance(string instance_id);
         static Status sendWebhook(nlohmann::json webhook);
         static Status setWebhook(string token, string webhook_url);
-
+        static std::vector<Database::Instance> retrieveInstances();
 };

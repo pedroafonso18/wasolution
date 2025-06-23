@@ -305,3 +305,41 @@ Status Database::deleteInstance(const std::string &instance_id) {
         return stat;
     }
 }
+
+std::vector<Database::Instance> Database::retrieveInstances() {
+    apiLogger.debug("Buscando instâncias.");
+    std::vector<Instance> instVec;
+    try {
+        if (!c || !c->is_open()) {
+            apiLogger.error("Conexão com banco de dados não está aberta");
+            return instVec;
+        }
+        pqxx::work wrk(*c);
+        pqxx::result res = wrk.exec(
+            "SELECT instance_id, name, instance_type, is_active, webhook_url, waba_id, access_token FROM instances"
+        );
+        wrk.commit();
+        if (res.empty()) {
+            apiLogger.debug("Nenhuma instância encontrada.");
+            return instVec;
+        }
+
+        for (const auto& row : res) {
+            Instance inst;
+            inst.instance_id = row[0].as<std::string>();
+            inst.instance_name = row[1].as<std::string>();
+            inst.instance_type = row[2].as<std::string>();
+            inst.is_active = row[3].as<bool>();
+            inst.webhook_url = row[4].as<std::string>();
+            inst.waba_id = row[5].as<std::string>();
+            inst.access_token = row[6].as<std::string>();
+
+            apiLogger.debug("Instância encontrada: " + inst.instance_name);
+            instVec.push_back(inst);
+        }
+        return instVec;
+    } catch (const std::exception& e) {
+        apiLogger.error("Erro ao buscar instâncias: " + std::string(e.what()));
+        return instVec;
+    }
+}

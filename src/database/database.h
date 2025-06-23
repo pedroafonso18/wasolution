@@ -33,4 +33,5 @@ public:
        api code from the database class.*/
     Status createInstance_w(std::string inst_token, std::string inst_name);
     Status insertWebhook_w(std::string inst_token, std::string webhook_url);
+    std::vector<Instance> retrieveInstances();
 };

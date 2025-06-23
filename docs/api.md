@@ -12,6 +12,16 @@ Onde:
 - `IP` é o endereço IP configurado (padrão: 0.0.0.0)
 - `PORT` é a porta configurada (padrão: 8080)
 
+## Autenticação
+
+Todas as requisições para a API devem incluir um token de autenticação no cabeçalho HTTP:
+
+```
+Authorization: Bearer {TOKEN}
+```
+
+Onde `{TOKEN}` é o token de acesso configurado no sistema. Requisições sem o token correto receberão um erro 401 (Unauthorized).
+
 ## Formatos de Resposta
 
 Todas as respostas são retornadas no formato JSON com os seguintes campos comuns:
@@ -344,6 +354,54 @@ O formato do webhook varia dependendo da API utilizada:
 **Códigos de Status HTTP:**
 - 200 OK: Requisição processada com sucesso
 - 400 Bad Request: Parâmetros inválidos ou ausentes
+- 500 Internal Server Error: Erro ao processar a requisição
+
+### 8. Listar Instâncias
+
+Retorna a lista de todas as instâncias cadastradas no sistema.
+
+**Endpoint:** `/retrieveInstances`  
+**Método:** GET  
+**Content-Type:** application/json
+
+**Sem parâmetros de requisição**
+
+**Exemplo de Resposta de Sucesso:**
+```json
+{
+  "status": "success",
+  "count": 2,
+  "instances": [
+    {
+      "instance_id": "instance001",
+      "instance_name": "Cliente A",
+      "instance_type": "EVOLUTION",
+      "is_active": true,
+      "webhook_url": "https://exemplo.com/webhook"
+    },
+    {
+      "instance_id": "instance002",
+      "instance_name": "Cliente B",
+      "instance_type": "WUZAPI",
+      "is_active": false,
+      "webhook_url": "https://exemplo.com/webhook2"
+    }
+  ]
+}
+```
+
+**Exemplo de Resposta de Erro:**
+```json
+{
+  "status": "error",
+  "message": "Failed to retrieve instances",
+  "error": "Database connection error"
+}
+```
+
+**Códigos de Status HTTP:**
+- 200 OK: Requisição processada com sucesso
+- 401 Unauthorized: Token de autenticação ausente ou inválido
 - 500 Internal Server Error: Erro ao processar a requisição
 
 ## Configuração do Servidor

@@ -390,3 +390,23 @@ Status Handler::setWebhook(string token, string webhook_url) {
     stat.status_string = nlohmann::json{{"error", "Instance type is not valid."}};
     return stat;
 }
+
+std::vector<Database::Instance> Handler::retrieveInstances() {
+    Database db;
+    Config cfg;
+    auto env = cfg.getEnv();
+
+    apiLogger.info("Retrieving all instances from database");
+
+    std::vector<Database::Instance> instances;
+    auto connection = db.connect(env.db_url);
+    if (connection.status_code == c_status::ERR) {
+        apiLogger.error("Failed to connect to database: " + connection.status_string.dump());
+        return instances;
+    }
+
+    instances = db.retrieveInstances();
+    apiLogger.info("Retrieved " + std::to_string(instances.size()) + " instances");
+
+    return instances;
+}
