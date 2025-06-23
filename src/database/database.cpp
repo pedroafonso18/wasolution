@@ -316,7 +316,7 @@ std::vector<Database::Instance> Database::retrieveInstances() {
         }
         pqxx::work wrk(*c);
         pqxx::result res = wrk.exec(
-            "SELECT instance_id, name, instance_type, is_active, webhook_url, waba_id, access_token FROM instances"
+            "SELECT instance_id, name, instance_type, is_active, webhook_url, waba_id, access_token, phone_number_id FROM instances"
         );
         wrk.commit();
         if (res.empty()) {
@@ -330,13 +330,28 @@ std::vector<Database::Instance> Database::retrieveInstances() {
             inst.instance_name = row[1].as<std::string>();
             inst.instance_type = row[2].as<std::string>();
             inst.is_active = row[3].as<bool>();
-            inst.webhook_url = row[4].as<std::string>();
-            inst.waba_id = row[5].as<std::string>();
-            inst.access_token = row[6].as<std::string>();
 
-            apiLogger.debug("Instância encontrada: " + inst.instance_name);
+            if (!row[4].is_null()) {
+                inst.webhook_url = row[4].as<std::string>();
+            }
+
+            if (!row[5].is_null()) {
+                inst.waba_id = row[5].as<std::string>();
+            }
+
+            if (!row[6].is_null()) {
+                inst.access_token = row[6].as<std::string>();
+            }
+
+            if (!row[7].is_null()) {
+                inst.phone_number_id = row[7].as<std::string>();
+            }
+
+            apiLogger.debug("Instância encontrada: " + inst.instance_name + " (ID: " + inst.instance_id + ")");
             instVec.push_back(inst);
         }
+
+        apiLogger.info("Recuperadas " + std::to_string(instVec.size()) + " instâncias do banco de dados");
         return instVec;
     } catch (const std::exception& e) {
         apiLogger.error("Erro ao buscar instâncias: " + std::string(e.what()));
