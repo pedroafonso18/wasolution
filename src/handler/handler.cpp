@@ -177,19 +177,31 @@ Status Handler::connectInstance(string instance_id) {
     }
     if (instance.value().instance_type == "WUZAPI") {
         Status response = Wuzapi::connectInstance_w(instance_id, env.wuz_url);
+        if (response.status_code == c_status::ERR) {
+            return response;
+        }
+
+        apiLogger.info("Instance connected successfully, fetching QR code");
+        Status qrResponse = Wuzapi::getQrCode_w(instance_id, env.wuz_url);
+
         try {
-            if (response.status_code == c_status::OK) {
-                response.status_string = nlohmann::json::parse(response.status_string.dump());
+            if (qrResponse.status_code == c_status::OK) {
+                nlohmann::json combinedResponse = nlohmann::json::parse(qrResponse.status_string.dump());
+                combinedResponse["message"] = "Instance connected successfully!";
+                combinedResponse["connection_status"] = nlohmann::json::parse(response.status_string.dump());
+                qrResponse.status_string = combinedResponse;
             }
         } catch (const std::exception& e) {
-            if (response.status_code == c_status::OK) {
-                response.status_string = nlohmann::json{
+            if (qrResponse.status_code == c_status::OK) {
+                qrResponse.status_string = nlohmann::json{
                     {"message", "Instance connected successfully!"},
-                    {"api_response", response.status_string}
+                    {"api_response", qrResponse.status_string},
+                    {"connection_status", response.status_string}
                 };
             }
         }
-        return response;
+
+        return qrResponse;
     } else if (instance.value().instance_type == "EVOLUTION") {
         Status response = Evolution::connectInstance_e(instance.value().instance_name, env.evo_url, env.evo_token);
         try {
