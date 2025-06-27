@@ -26,3 +26,7 @@ void Logger::error(const std::string& message) {
 void Logger::debug(const std::string& message) {
     logger_->debug(message);
 }
+
+void Logger::warn(const std::string& message) {
+    logger_->warn(message);
+}
