@@ -293,35 +293,7 @@ http::response<http::string_body> handle_request(http::request<http::string_body
         }
         res.prepare_payload();
         return res;
-        } if (req.method() == http::verb::post && req.target() == "/webhook") {
-
-        http::response<http::string_body> res{http::status::ok, req.version()};
-        res.set(http::field::server, "Beast");
-        res.set(http::field::content_type, "application/json");
-        res.keep_alive(req.keep_alive());
-
-        try {
-            auto body = nlohmann::json::parse(req.body());
-            Status stat = Handler::sendWebhook(body);
-            nlohmann::json resp_json;
-            resp_json["status_code"] = stat.status_code;
-            resp_json["status_string"] = stat.status_string;
-            res.body() = resp_json.dump();
-
-            if (stat.status_code == c_status::ERR) {
-                res.result(http::status::internal_server_error);
-            }
-        } catch (const std::exception& e) {
-            res.result(http::status::bad_request);
-            nlohmann::json err_json;
-            err_json["error"] = e.what();
-            res.body() = err_json.dump();
-
-            std::cerr << "Erro ao processar webhook: " << e.what() << std::endl;
         }
-        res.prepare_payload();
-        return res;
-    }
     if (req.method() == http::verb::post && req.target() == "/sendTemplate") {
         http::response<http::string_body> res{http::status::ok, req.version()};
         res.set(http::field::server, "Beast");
@@ -399,9 +371,12 @@ class Session : public std::enable_shared_from_this<Session> {
     tcp::socket socket_;
     beast::flat_buffer buffer_;
     http::request<http::string_body> req_;
+    http::request_parser<http::string_body> parser_;
 
 public:
-    explicit Session(tcp::socket socket) : socket_(std::move(socket)) {}
+    explicit Session(tcp::socket socket) : socket_(std::move(socket)) {
+        parser_.body_limit(50 * 1024 * 1024);
+    }
 
     void run() {
         do_read();
@@ -410,8 +385,11 @@ public:
 private:
     void do_read() {
         auto self(shared_from_this());
-        http::async_read(socket_, buffer_, req_, [this, self](beast::error_code ec, std::size_t) {
+
+        http::async_read(socket_, buffer_, parser_,
+            [this, self](beast::error_code ec, std::size_t) {
             if (!ec) {
+                req_ = parser_.release();
                 apiLogger.debug("Requisição recebida: " + std::string(req_.method_string()) + " " + std::string(req_.target()));
                 do_write(handle_request(req_));
             } else {

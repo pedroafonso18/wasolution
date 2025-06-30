@@ -2,7 +2,6 @@
 
 #include <string>
 #include "../constants.h"
-#include "../webhook/webhook.h"
 #include "../api/evolution.h"
 #include "../api/wuzapi.h"
 #include "../config/config.h"
@@ -21,7 +20,6 @@ class Handler {
         static Status deleteInstance(string instance_id);
         static Status connectInstance(string instance_id);
         static Status logoutInstance(string instance_id);
-        static Status sendWebhook(nlohmann::json webhook);
         static Status setWebhook(string token, string webhook_url);
         static std::vector<Database::Instance> retrieveInstances();
         static Status sendTemplate(string instance_id, string number, string body, MediaType type, std::vector<FB_VARS> vars, std::string template_name);

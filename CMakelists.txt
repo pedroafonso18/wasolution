@@ -30,7 +30,6 @@ set(SOURCES
     src/config/config.cpp
     src/database/database.cpp
     src/handler/handler.cpp
-        src/webhook/webhook.cpp
     src/logger/logger.cpp
         src/cloud/cloud_api.cpp
         src/cloud/cloud_api.h

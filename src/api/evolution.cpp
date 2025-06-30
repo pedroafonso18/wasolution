@@ -97,23 +97,58 @@ Status Evolution::sendMessage_e(string phone, string token, string url, MediaTyp
         return stat;
     }
     string req_url;
-    string req_body;
+    nlohmann::json req_body_json;
     if (type == MediaType::TEXT) {
         req_url = std::format("{}/message/sendText/{}", url, instance_name);
-        req_body = std::format(R"({{"number" : "{}", "text" : "{}"}})", phone, msg_template);
+        req_body_json = {
+            {"number", phone},
+            {"text", msg_template}
+        };
         apiLogger.debug("Enviando mensagem de texto");
     } else if (type == MediaType::AUDIO) {
         req_url = std::format("{}/message/sendWhatsappAudio/{}", url, instance_name);
-        req_body = std::format(R"({{"number" : "{}", "audio" : "{}", "delay": 100}})", phone, msg_template);
+        req_body_json = {
+            {"number", phone},
+            {"audio", msg_template},
+            {"delay", 100}
+        };
         apiLogger.debug("Enviando mensagem de áudio");
     } else if (type == MediaType::IMAGE) {
         req_url = std::format("{}/message/sendMedia/{}", url, instance_name);
-        req_body = std::format(R"({{"number" : "{}", "media" : "{}", "mediatype" : "image", "mimetype" : "image/png", "caption": "", "fileName" : "imagem.png"}})", phone, msg_template);
+        
+        std::string media_data = msg_template;
+        if (!media_data.empty() && media_data.substr(0, 22) == "data:image/png;base64,") {
+            media_data = media_data.substr(22);
+            apiLogger.debug("Removed data URL prefix from base64 data");
+        } else if (!media_data.empty() && media_data.substr(0, 5) == "data:") {
+            size_t comma_pos = media_data.find(',');
+            if (comma_pos != std::string::npos) {
+                media_data = media_data.substr(comma_pos + 1);
+                apiLogger.debug("Removed data URL prefix from base64 data");
+            }
+        }
+        
+        req_body_json = {
+            {"number", phone},
+            {"media", media_data},
+            {"mediatype", "image"},
+            {"mimetype", "image/png"},
+            {"caption", ""},
+            {"fileName", "imagem.png"}
+        };
         apiLogger.debug("Enviando mensagem de imagem");
+        apiLogger.debug("Media data length: " + std::to_string(media_data.length()));
+        if (media_data.length() > 50) {
+            apiLogger.debug("Media data preview: " + media_data.substr(0, 50) + "...");
+        } else {
+            apiLogger.debug("Media data: " + media_data);
+        }
     } else {
         apiLogger.error("Tipo de mídia não suportado: " + std::to_string(static_cast<int>(type)));
         return Status{c_status::ERR, nlohmann::json{{"error", "Unsupported media type"}}};
     }
+    
+    string req_body = req_body_json.dump();
     apiLogger.debug("URL da requisição: " + req_url);
     apiLogger.debug("Corpo da requisição: " + req_body);
 

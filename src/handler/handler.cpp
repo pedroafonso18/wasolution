@@ -105,13 +105,12 @@ Status Handler::createInstance(const string &instance_id, const string &instance
     Status api_response;
 
     auto env = config.getEnv();
-    std::string web_url = std::format("http://{}:{}/webhook", env.ip_address, PORT);
     if (api_type == ApiType::EVOLUTION) {
         apiLogger.info("Criando instância Evolution");
-        api_response = Evolution::createInstance_e(env.evo_token, instance_id, instance_name, env.evo_url, web_url, proxy_url);
+        api_response = Evolution::createInstance_e(env.evo_token, instance_id, instance_name, env.evo_url, webhook_url, proxy_url);
     } else if (api_type == ApiType::WUZAPI) {
         apiLogger.info("Criando instância WuzAPI");
-        api_response = Wuzapi::createInstance_w(instance_id, instance_name, env.wuz_url, web_url, proxy_url, env.wuz_admin_token);
+        api_response = Wuzapi::createInstance_w(instance_id, instance_name, env.wuz_url, webhook_url, proxy_url, env.wuz_admin_token);
     } else if (api_type == ApiType::CLOUD) {
         apiLogger.info("Criando instância Cloud");
         api_response = Cloud::registerNumber(waba_id, access_token);
@@ -289,13 +288,6 @@ Status Handler::deleteInstance(string instance_id) {
     stat.status_code = c_status::ERR;
     stat.status_string = nlohmann::json{{"error", "Instance type is not valid."}};
     return stat;
-}
-
-Status Handler::sendWebhook(nlohmann::json webhook) {
-    Config config;
-    auto env = config.getEnv();
-
-    return Webhook::send_webhook(webhook, env.default_webhook);
 }
 
 
