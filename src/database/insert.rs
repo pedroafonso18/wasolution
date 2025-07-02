@@ -1,8 +1,7 @@
 use crate::constants::consts::{ApiType, Status, StatusT};
-use tokio_postgres::{Client, Error};
+use tokio_postgres::Client;
 use tokio_postgres::types::ToSql;
 use serde_json::json;
-use log;
 
 pub async fn insert_instance(
     client: &Client,

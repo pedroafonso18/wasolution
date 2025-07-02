@@ -3,6 +3,7 @@ mod config;
 mod logger;
 mod constants;
 mod database;
+mod api;
 use axum;
 
 #[tokio::main]

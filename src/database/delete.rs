@@ -1,5 +1,4 @@
 use tokio_postgres::{Client};
-use log;
 use serde_json::json;
 use crate::constants::consts::{Status, StatusT};
 
