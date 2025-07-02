@@ -795,4 +795,3 @@ pub async fn delete_instance_w(inst_token: &str, url: &str, wuz_admin_token: &st
         json_status,
     }
 }
-
