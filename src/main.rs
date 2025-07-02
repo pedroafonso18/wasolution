@@ -2,6 +2,7 @@ mod router;
 mod config;
 mod logger;
 mod constants;
+mod database;
 use axum;
 
 #[tokio::main]
