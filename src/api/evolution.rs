@@ -13,6 +13,15 @@ pub struct Proxy {
 }
 
 pub async fn send_message_e(phone: &str, token: &str, url: &str, m_type: &MediaType, msg_template: &str, inst_name: &str) -> Status {
+    let start_time = Instant::now();
+    info!("=== SEND MESSAGE (EVOLUTION) START ===");
+    debug!("Phone: {}", phone);
+    debug!("Token: {}", token);
+    debug!("URL: {}", url);
+    debug!("MediaType: {:?}", m_type);
+    debug!("Instance Name: {}", inst_name);
+    debug!("Message Template: {}", msg_template);
+
     let client = reqwest::Client::new();
     let req_body: Value;
     let req_url: String;
@@ -34,11 +43,11 @@ pub async fn send_message_e(phone: &str, token: &str, url: &str, m_type: &MediaT
         let mut media_data: String = msg_template.to_string();
         if !media_data.is_empty() && media_data.starts_with("data:image/png;base64,") {
             media_data = media_data[22..].to_string();
-            log::debug!("Removed data URL prefix from base64 data");
+            debug!("Removed data URL prefix from base64 data");
         } else if !media_data.is_empty() && media_data.starts_with("data:") {
             if let Some(comma_pos) = media_data.find(',') {
                 media_data = media_data[(comma_pos + 1)..].to_string();
-                log::debug!("Removed data URL prefix from base64 data");
+                debug!("Removed data URL prefix from base64 data");
             }
         }
         req_body = json!({
@@ -54,6 +63,8 @@ pub async fn send_message_e(phone: &str, token: &str, url: &str, m_type: &MediaT
             "error":"Invalid MediaType"
         });
     }
+    debug!("URL da requisição: {}", req_url);
+    debug!("Corpo da requisição: {}", req_body);
 
     let response = client
         .post(req_url)
@@ -64,29 +75,54 @@ pub async fn send_message_e(phone: &str, token: &str, url: &str, m_type: &MediaT
         .send()
         .await;
 
-    match response {
+    let (status_code, json_status) = match response {
         Ok(resp) => {
-            let status = resp.status();
-            let json_status: Value = match resp.json().await {
-                Ok(json) => json,
-                Err(_) => serde_json::json!({"error": "Failed to parse response JSON"}),
-            };
-            if status.is_success() {
-                Status {
-                    status_code: StatusT::OK,
-                    json_status,
-                }
-            } else {
-                Status {
-                    status_code: StatusT::ERR,
-                    json_status,
+            let http_status = resp.status();
+            let http_code = http_status.as_u16();
+            let text = resp.text().await.unwrap_or_else(|_| "".to_string());
+            debug!("Código de resposta HTTP: {}", http_code);
+            debug!("Resposta HTTP: {}", text);
+            match serde_json::from_str::<serde_json::Value>(&text) {
+                Ok(json) => {
+                    if http_status.is_success() {
+                        info!("Mensagem enviada com sucesso para: {}", phone);
+                        (StatusT::OK, json)
+                    } else {
+                        error!("Erro HTTP ao enviar mensagem - Código: {}", http_code);
+                        let mut json = json;
+                        if !json.get("error").is_some() {
+                            json["error"] = serde_json::json!("Servidor retornou código de erro HTTP");
+                        }
+                        (StatusT::ERR, json)
+                    }
+                },
+                Err(e) => {
+                    error!("Erro ao processar resposta do envio: {}", e);
+                    if !http_status.is_success() {
+                        (StatusT::ERR, json!({
+                            "error": "Erro no servidor remoto",
+                            "raw_response": text
+                        }))
+                    } else {
+                        (StatusT::OK, json!({
+                            "raw_response": text
+                        }))
+                    }
                 }
             }
         },
-        Err(e) => Status {
-            status_code: StatusT::ERR,
-            json_status: serde_json::json!({"error": format!("Request failed: {}", e)}),
-        },
+        Err(e) => {
+            error!("Erro de requisição: {}", e);
+            (StatusT::ERR, json!({"error": format!("Request failed: {}", e)}))
+        }
+    };
+
+    let duration = start_time.elapsed().as_millis();
+    info!("=== SEND MESSAGE (EVOLUTION) END - Duração: {}ms ===", duration);
+
+    Status {
+        status_code,
+        json_status,
     }
 }
 
@@ -312,8 +348,14 @@ pub async fn create_instance_e(
 }
 
 pub async fn delete_instance_e(inst_token: &str, evo_token: &str, evo_url: &str) -> Status {
+    let start_time = Instant::now();
+    info!("=== DELETE INSTANCE (EVOLUTION) START ===");
+    debug!("Instance Token: {}", inst_token);
+    debug!("Evo Token: {}", evo_token);
+    debug!("Evo URL: {}", evo_url);
     let client = reqwest::Client::new();
     let req_url = format!("{}/instance/delete/{}", evo_url, inst_token);
+    debug!("URL da requisição: {}", req_url);
     let response = client.delete(req_url)
         .header("apikey", evo_token)
         .header("Content-Type", "application/json")
@@ -361,17 +403,23 @@ pub async fn delete_instance_e(inst_token: &str, evo_token: &str, evo_url: &str)
             (StatusT::ERR, json!({"error": format!("Request failed: {}", e)}))
         }
     };
-
+    let duration = start_time.elapsed().as_millis();
+    info!("=== DELETE INSTANCE (EVOLUTION) END - Duração: {}ms ===", duration);
     Status {
         status_code,
         json_status,
     }
-
 }
 
 pub async fn connect_instance_e(inst_token: &str, evo_url: &str, evo_token: &str) -> Status {
+    let start_time = Instant::now();
+    info!("=== CONNECT INSTANCE (EVOLUTION) START ===");
+    debug!("Instance Token: {}", inst_token);
+    debug!("Evo Token: {}", evo_token);
+    debug!("Evo URL: {}", evo_url);
     let client = reqwest::Client::new();
     let req_url = format!("{}/instance/connect/{}", evo_url, inst_token);
+    debug!("URL da requisição: {}", req_url);
     let response = client.get(req_url)
         .header("apikey", evo_token)
         .header("Content-Type", "application/json")
@@ -419,17 +467,23 @@ pub async fn connect_instance_e(inst_token: &str, evo_url: &str, evo_token: &str
             (StatusT::ERR, json!({"error": format!("Request failed: {}", e)}))
         }
     };
-
+    let duration = start_time.elapsed().as_millis();
+    info!("=== CONNECT INSTANCE (EVOLUTION) END - Duração: {}ms ===", duration);
     Status {
         status_code,
         json_status,
     }
 }
 
-
 pub async fn logout_instance_e(inst_token: &str, evo_url: &str, evo_token: &str) -> Status {
+    let start_time = Instant::now();
+    info!("=== LOGOUT INSTANCE (EVOLUTION) START ===");
+    debug!("Instance Token: {}", inst_token);
+    debug!("Evo Token: {}", evo_token);
+    debug!("Evo URL: {}", evo_url);
     let client = reqwest::Client::new();
     let req_url = format!("{}/instance/logout/{}", evo_url, inst_token);
+    debug!("URL da requisição: {}", req_url);
     let response = client.delete(req_url)
         .header("apikey", evo_token)
         .header("Content-Type", "application/json")
@@ -477,7 +531,8 @@ pub async fn logout_instance_e(inst_token: &str, evo_url: &str, evo_token: &str)
             (StatusT::ERR, json!({"error": format!("Request failed: {}", e)}))
         }
     };
-
+    let duration = start_time.elapsed().as_millis();
+    info!("=== LOGOUT INSTANCE (EVOLUTION) END - Duração: {}ms ===", duration);
     Status {
         status_code,
         json_status,
@@ -485,6 +540,12 @@ pub async fn logout_instance_e(inst_token: &str, evo_url: &str, evo_token: &str)
 }
 
 pub async fn set_webhook_e(inst_token: &str, evo_url: &str, evo_token: &str, webhook_url: &str) -> Status {
+    let start_time = Instant::now();
+    info!("=== SET WEBHOOK (EVOLUTION) START ===");
+    debug!("Instance Token: {}", inst_token);
+    debug!("Evo Token: {}", evo_token);
+    debug!("Evo URL: {}", evo_url);
+    debug!("Webhook URL: {}", webhook_url);
     let client = reqwest::Client::new();
     let req_url = format!("{}/webhook/set/{}", evo_url, inst_token);
     let req_body = json!({
@@ -494,6 +555,8 @@ pub async fn set_webhook_e(inst_token: &str, evo_url: &str, evo_token: &str, web
         "webhookBase64" : true,
         "events" : ["APPLICATION_STARTUP", "MESSAGE_UPSERT"]
     });
+    debug!("URL da requisição: {}", req_url);
+    debug!("Corpo da requisição: {}", req_body);
     let response = client.get(req_url)
         .header("apikey", evo_token)
         .header("Content-Type", "application/json")
@@ -542,7 +605,8 @@ pub async fn set_webhook_e(inst_token: &str, evo_url: &str, evo_token: &str, web
             (StatusT::ERR, json!({"error": format!("Request failed: {}", e)}))
         }
     };
-
+    let duration = start_time.elapsed().as_millis();
+    info!("=== SET WEBHOOK (EVOLUTION) END - Duração: {}ms ===", duration);
     Status {
         status_code,
         json_status,

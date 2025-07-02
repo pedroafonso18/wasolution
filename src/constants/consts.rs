@@ -2,7 +2,7 @@ use serde_json::Value;
 use std::fmt;
 
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Debug)]
 pub enum MediaType {
     IMAGE,
     AUDIO,

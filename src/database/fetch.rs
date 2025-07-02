@@ -33,6 +33,9 @@ pub async fn fetch_instance(client: &Client, instance_id: &str) -> Result<Option
 
 pub async fn get_qr_code(client: &Client, token: &str) -> Result<String, Error> {
     let result = client.query("SELECT qrcode FROM users WHERE id = $1 OR token = $1 LIMIT 1", &[&token]).await?;
+    if result.is_empty() {
+        return Ok(String::new());
+    }
     let row = &result[0];
     Ok(row.get("qrcode"))
 }
