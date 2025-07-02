@@ -12,8 +12,9 @@ pub struct Env {
     pub wuz_admin_token: String,
     pub log_level: String,
     pub ip: String,
-    pub port: String,
+    pub port: i32,
     pub token: String,
+    pub cloud_version: f32,
 }
 
 pub fn load_config() -> Env {
@@ -29,8 +30,15 @@ pub fn load_config() -> Env {
     let wuz_admin_token = env::var("WUZ_ADMIN_TOKEN").expect("WUZ_ADMIN_TOKEN not found in the .env");
     let log_level = env::var("LOG_LEVEL").unwrap_or("debug".to_string());
     let ip = env::var("IP_ADDRESS").unwrap_or("0.0.0.0".to_string());
-    let port = env::var("PORT").unwrap_or("8080".to_string());
+    let port = env::var("PORT")
+        .ok()
+        .and_then(|v| v.parse::<i32>().ok())
+        .unwrap_or(8080);
     let token = env::var("TOKEN").unwrap_or("ABCD1234".to_string()); // PLEASE CHANGE THIS.
+    let cloud_version = env::var("CLOUD_VERSION")
+        .ok()
+        .and_then(|v| v.parse::<f32>().ok())
+        .unwrap_or(22.0);
 
     Env{
         evo_url,
@@ -43,7 +51,8 @@ pub fn load_config() -> Env {
         log_level,
         ip,
         port,
-        token
+        token,
+        cloud_version
     }
 }
 
