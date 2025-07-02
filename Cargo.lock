@@ -11,6 +11,8 @@ dependencies = [
  "flexi_logger",
  "log",
  "reqwest",
+ "serde",
+ "serde_json",
  "tokio",
 ]
 

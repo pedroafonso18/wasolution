@@ -11,6 +11,9 @@ pub struct Env {
     pub default_webhook: String,
     pub wuz_admin_token: String,
     pub log_level: String,
+    pub ip: String,
+    pub port: String,
+    pub token: String,
 }
 
 pub fn load_config() -> Env {
@@ -25,6 +28,9 @@ pub fn load_config() -> Env {
     let default_webhook = env::var("DEFAULT_WEBHOOK").expect("DEFAULT_WEBHOOK not found in the .env");
     let wuz_admin_token = env::var("WUZ_ADMIN_TOKEN").expect("WUZ_ADMIN_TOKEN not found in the .env");
     let log_level = env::var("LOG_LEVEL").unwrap_or("debug".to_string());
+    let ip = env::var("IP_ADDRESS").unwrap_or("0.0.0.0".to_string());
+    let port = env::var("PORT").unwrap_or("8080".to_string());
+    let token = env::var("TOKEN").unwrap_or("ABCD1234".to_string()); // PLEASE CHANGE THIS.
 
     Env{
         evo_url,
@@ -34,7 +40,10 @@ pub fn load_config() -> Env {
         db_url_wuz,
         default_webhook,
         wuz_admin_token,
-        log_level
+        log_level,
+        ip,
+        port,
+        token
     }
 }
 
