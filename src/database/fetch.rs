@@ -1,6 +1,5 @@
 use tokio_postgres::{Client, Error};
 use log;
-use crate::constants::consts::{ApiType, Status, StatusT};
 
 pub struct Instance {
     pub instance_id: String,
@@ -38,3 +37,25 @@ pub async fn get_qr_code(client: &Client, token: &str) -> Result<String, Error> 
     Ok(row.get("qrcode"))
 }
 
+pub async fn retrieve_instances(client: &Client) -> Result<Vec<Instance>, Error> {
+    let mut inst_vec: Vec<Instance> = Vec::new();
+    let rows = client.query("SELECT instance_id, name, instance_type, is_active, webhook_url, waba_id, access_token, phone_number_id FROM instances", &[]).await?;
+    if rows.is_empty() {
+        log::error!("Erro: Nenhuma instância no banco de dados.");
+        return Ok(inst_vec);
+    }
+    for row in rows {
+        let instance = Instance {
+            instance_id: row.get("instance_id"),
+            instance_name: row.get("name"),
+            instance_type: row.get("instance_type"),
+            is_active: row.get("is_active"),
+            webhook_url: row.get("webhook_url"),
+            waba_id: row.get("waba_id"),
+            access_token: row.get("access_token"),
+            phone_number_id: row.get("phone_number_id"),
+        };
+        inst_vec.push(instance);
+    }
+    Ok(inst_vec)
+}
