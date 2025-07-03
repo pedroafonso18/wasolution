@@ -125,6 +125,17 @@ Status Handler::createInstance(const string &instance_id, const string &instance
         apiLogger.error("Erro na criação da instância: " + api_response.status_string.dump());
         return api_response;
     }
+
+    if (api_type == ApiType::EVOLUTION && !env.rabbit_url.empty()) {
+        apiLogger.info("Configurando RabbitMQ para instância Evolution: " + instance_name);
+        Status rabbit_response = Evolution::setRabbit_e(instance_name, env.rabbit_url, env.evo_url, env.evo_token);
+        if (rabbit_response.status_code == c_status::ERR) {
+            apiLogger.warn("Falha ao configurar RabbitMQ para instância: " + instance_name + " - " + rabbit_response.status_string.dump());
+        } else {
+            apiLogger.info("RabbitMQ configurado com sucesso para instância: " + instance_name);
+        }
+    }
+
     if (auto connection = db.connect(env.db_url); connection.status_code == c_status::ERR) {
         apiLogger.error("Erro ao conectar ao banco principal: " + connection.status_string.dump());
         return connection;

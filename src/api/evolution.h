@@ -27,6 +27,7 @@ public:
     static Status connectInstance_e(const string& inst_token, const string &evo_url, const string& evo_token);
     static Status logoutInstance_e(const string& inst_token, const string& evo_url, const string& evo_token);
     static Status setWebhook_e(string token, string webhook_url, string url, string evo_token);
+    static Status setRabbit_e(string token, string rabbit_url, string url, string evo_token);
 private:
     static Proxy ParseProxy(std::string proxy_url);
 };

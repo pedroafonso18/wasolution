@@ -1,9 +1,96 @@
 #include "evolution.h"
+#include "api_constants.h"
 #include "logger/logger.h"
 #include "config/config.h"
 using std::string;
 
 extern Logger apiLogger;
+
+Status Evolution::setRabbit_e(string token, string rabbit_url, string url, string evo_token) {
+    auto start_time = std::chrono::high_resolution_clock::now();
+    apiLogger.info("=== SET RABBIT (EVOLUTION) STARTING ===");
+    apiLogger.info("Colocando rabbit com url: " + rabbit_url);
+    CURL *curl = curl_easy_init();
+    std::string responseBody;
+    Status stat;
+    if (!curl) {
+        apiLogger.error("Falha ao inicializar CURL");
+        stat.status_code = c_status::ERR;
+        stat.status_string = nlohmann::json{{"error", "Failed to initialize CURL"}};
+        return stat;
+    }
+    string req_url = std::format("{}/rabbitmq/set/{}", url, token);
+    apiLogger.debug("URL da requisição: " + req_url);
+    struct curl_slist *headers = nullptr;
+    const string authorization = std::format("apikey: {}", evo_token);
+    headers = curl_slist_append(headers, authorization.c_str());
+    headers = curl_slist_append(headers, "Content-Type: application/json");
+    headers = curl_slist_append(headers, "accept: application/json");
+
+    curl_easy_setopt(curl, CURLOPT_URL, req_url.c_str());
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &responseBody);
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+    curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "POST");
+
+    apiLogger.debug("Executando requisição CURL para conexão da instância...");
+    if (const CURLcode res = curl_easy_perform(curl); res != CURLE_OK) {
+        apiLogger.error("Erro CURL: " + std::string(curl_easy_strerror(res)));
+        curl_slist_free_all(headers);
+        curl_easy_cleanup(curl);
+        stat.status_code = c_status::ERR;
+        stat.status_string = nlohmann::json {{ "error", curl_easy_strerror(res)}};
+        return stat;
+    }
+    long http_code = 0;
+    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
+    bool http_ok = isHttpResponseOk(curl);
+    apiLogger.info("Código de resposta HTTP: " + std::to_string(http_code));
+    apiLogger.debug("Resposta HTTP: " + responseBody);
+
+    curl_slist_free_all(headers);
+    curl_easy_cleanup(curl);
+
+    try {
+        nlohmann::json response = nlohmann::json::parse(responseBody);
+
+        if (!http_ok) {
+            apiLogger.error("Erro HTTP ao conectar instância - Código: " + std::to_string(http_code));
+            stat.status_code = c_status::ERR;
+            stat.status_string = response;
+            if (!response.contains("error")) {
+                response["error"] = "Servidor retornou código de erro HTTP";
+                stat.status_string = response;
+            }
+        } else {
+            apiLogger.info("Rabbit conectada com sucesso: " + token);
+            stat.status_code = c_status::OK;
+            stat.status_string = response;
+        }
+    } catch (const std::exception& e) {
+        apiLogger.error("Erro ao processar resposta da conexão: " + std::string(e.what()));
+        if (!http_ok) {
+            stat.status_code = c_status::ERR;
+            stat.status_string = nlohmann::json{
+                    {"error", "Erro no servidor remoto"},
+                    {"raw_response", responseBody}
+            };
+        } else {
+            stat.status_code = c_status::OK;
+            stat.status_string = nlohmann::json{
+                    {"raw_response", responseBody}
+            };
+        }
+    }
+
+    auto end_time = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
+    apiLogger.info("=== SET RABBIT (EVOLUTION) END - Duração: " + std::to_string(duration.count()) + "ms ===");
+
+    return stat;
+
+}
+
 
 Evolution::Proxy Evolution::ParseProxy(std::string proxy_url) {
     apiLogger.debug("Analisando URL do proxy: " + proxy_url);

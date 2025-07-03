@@ -1,4 +1,4 @@
-#include "wuzapi.h"
+    #include "wuzapi.h"
 #include "logger/logger.h"
 #include <thread>
 #include <chrono>
@@ -748,7 +748,7 @@ Status Wuzapi::connectInstance_w(string inst_token, string url) {
 }
 
 Status Wuzapi::logoutInstance_w(string inst_token, string url) {
-    auto start_time = std::chrono::high_resolution_clock::now();
+    const auto start_time = std::chrono::high_resolution_clock::now();
     apiLogger.info("=== LOGOUT INSTANCE START ===");
     apiLogger.info("Desconectando instância WuzAPI: " + inst_token);
     
