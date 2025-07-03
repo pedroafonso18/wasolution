@@ -4,6 +4,7 @@ mod logger;
 mod constants;
 mod database;
 mod api;
+mod handler;
 use axum;
 
 #[tokio::main]

@@ -242,7 +242,7 @@ pub async fn register_number(waba_id: &str, access_token: &str, cloud_version: &
     }
 }
 
-pub async fn send_message(
+pub async fn send_message_c(
     instance_id: &str,
     receiver: &str,
     body: &str,
