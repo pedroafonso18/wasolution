@@ -51,6 +51,13 @@ Status Evolution::setRabbit_e(string token, string rabbit_url, string url, strin
     curl_slist_free_all(headers);
     curl_easy_cleanup(curl);
 
+    if (responseBody.empty()) {
+        apiLogger.warn("Resposta HTTP vazia recebida com status de sucesso.");
+        stat.status_code = c_status::OK;
+        stat.status_string = nlohmann::json{{"message", "RabbitMQ configurado com sucesso, mas sem resposta JSON do servidor."}};
+        return stat;
+    }
+
     try {
         nlohmann::json response = nlohmann::json::parse(responseBody);
 
@@ -605,6 +612,13 @@ Status Evolution::connectInstance_e(const string& inst_token, const string& evo_
     curl_slist_free_all(headers);
     curl_easy_cleanup(curl);
 
+    if (responseBody.empty()) {
+        apiLogger.warn("Resposta HTTP vazia recebida com status de sucesso.");
+        stat.status_code = c_status::OK;
+        stat.status_string = nlohmann::json{{"message", "RabbitMQ configurado com sucesso, mas sem resposta JSON do servidor."}};
+        return stat;
+    }
+
     try {
         nlohmann::json response = nlohmann::json::parse(responseBody);
 
@@ -708,6 +722,13 @@ Status Evolution::logoutInstance_e(const string& inst_token, const string& evo_u
 
     curl_slist_free_all(headers);
     curl_easy_cleanup(curl);
+
+    if (responseBody.empty()) {
+        apiLogger.warn("Resposta HTTP vazia recebida com status de sucesso.");
+        stat.status_code = c_status::OK;
+        stat.status_string = nlohmann::json{{"message", "RabbitMQ configurado com sucesso, mas sem resposta JSON do servidor."}};
+        return stat;
+    }
 
     try {
         nlohmann::json response = nlohmann::json::parse(responseBody);
@@ -822,6 +843,13 @@ Status Evolution::setWebhook_e(string token, string webhook_url, string url, str
 
     curl_slist_free_all(headers);
     curl_easy_cleanup(curl);
+
+    if (responseBody.empty()) {
+        apiLogger.warn("Resposta HTTP vazia recebida com status de sucesso.");
+        stat.status_code = c_status::OK;
+        stat.status_string = nlohmann::json{{"message", "Webhook configurado com sucesso, mas sem resposta JSON do servidor."}};
+        return stat;
+    }
 
     try {
         nlohmann::json response = nlohmann::json::parse(responseBody);
