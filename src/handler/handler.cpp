@@ -499,6 +499,7 @@ Status Handler::setWebhook(string token, string webhook_url) {
 
 std::vector<Database::Instance> Handler::retrieveInstances() {
     Database db;
+    Database evo_db;
     Config cfg;
     auto env = cfg.getEnv();
 
@@ -511,8 +512,44 @@ std::vector<Database::Instance> Handler::retrieveInstances() {
         return instances;
     }
 
+    bool evo_db_connected = false;
+    if (!env.db_url_evo.empty()) {
+        auto evo_connection = evo_db.connect(env.db_url_evo);
+        if (evo_connection.status_code == c_status::OK) {
+            evo_db_connected = true;
+            apiLogger.debug("Connected to Evolution database for instance status verification");
+        } else {
+            apiLogger.warn("Failed to connect to Evolution database: " + evo_connection.status_string.dump());
+        }
+    }
+
     instances = db.retrieveInstances();
     apiLogger.info("Retrieved " + std::to_string(instances.size()) + " instances");
+
+    for (auto& instance : instances) {
+        ApiType api_type;
+        if (instance.instance_type == "EVOLUTION") {
+            api_type = ApiType::EVOLUTION;
+        } else if (instance.instance_type == "WUZAPI") {
+            api_type = ApiType::WUZAPI;
+        } else if (instance.instance_type == "CLOUD") {
+            api_type = ApiType::CLOUD;
+        } else {
+            apiLogger.warn("Unknown instance type for instance " + instance.instance_id + ": " + instance.instance_type);
+            continue;
+        }
+
+        if (instance.instance_type == "EVOLUTION" && !evo_db_connected) {
+            apiLogger.debug("Skipping activity verification for Evolution instance " + instance.instance_id + " - Evolution DB not connected");
+            continue;
+        }
+
+        bool is_active = db.isActive(api_type, instance.instance_id, evo_db);
+        instance.is_active = is_active;
+
+        apiLogger.debug("Instance " + instance.instance_id + " (" + instance.instance_type + ") activity status: " +
+                       (is_active ? "active" : "inactive"));
+    }
 
     return instances;
 }
