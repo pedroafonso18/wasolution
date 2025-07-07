@@ -26,10 +26,20 @@ Status Evolution::setRabbit_e(string token, string rabbit_url, string url, strin
     headers = curl_slist_append(headers, authorization.c_str());
     headers = curl_slist_append(headers, "Content-Type: application/json");
     headers = curl_slist_append(headers, "accept: application/json");
+    nlohmann::json req_body_json = {
+        {"rabbitmq", {
+            {"enabled", true},
+            {"events", {"MESSAGES_UPSERT", "MESSAGES_SET"}}
+        }}
+    };
+
+    std::string req_body = req_body_json.dump();
+    apiLogger.debug("Request body: " + req_body);
 
     curl_easy_setopt(curl, CURLOPT_URL, req_url.c_str());
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &responseBody);
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, req_body.c_str());
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
     curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "POST");
 
