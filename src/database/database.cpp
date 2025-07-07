@@ -373,29 +373,28 @@ bool Database::fetchIsActive_e(std::string inst_id, Database& db) {
         }
 
         pqxx::work wrk(*(*conn));
-        pqxx::result res = wrk.exec(
-            "SELECT connectionStatus FROM instances WHERE name = " + wrk.quote(inst_id)
+        pqxx::result res;
+        res = wrk.exec(
+            "SELECT \"connectionStatus\" FROM \"Instance\" WHERE token = " + wrk.quote(inst_id)
         );
         wrk.commit();
 
         if (res.empty()) {
-            apiLogger.debug("Nenhuma instância encontrada.");
+            apiLogger.debug("Nenhuma instância encontrada no Evolution database para: " + inst_id);
             return false;
         }
 
         std::string resp = res[0][0].as<std::string>();
+        apiLogger.debug("Estado da instância no Evolution: " + resp);
 
-        if (resp == "open") {
+        if (resp == "open" || resp == "connecting") {
             return true;
-        }
-        else if (resp == "connecting") {
-            return true;
-        } else if (resp == "close") {
+        } else {
             return false;
         }
-        return false;
+
     } catch (const std::exception& e) {
-        apiLogger.error("Erro ao buscar instâncias: " + std::string(e.what()));
+        apiLogger.error("Erro ao buscar instância no Evolution DB: " + std::string(e.what()));
         return false;
     }
 }
