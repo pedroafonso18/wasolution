@@ -11,6 +11,7 @@ Status Handler::sendMessage(const string &instance_id, string number, string bod
     apiLogger.info("Iniciando envio de mensagem para instância: " + instance_id);
     Config config;
     Database db;
+    Database evo_db;
     std::string instance_name;
     Status stat;
 
@@ -31,6 +32,34 @@ Status Handler::sendMessage(const string &instance_id, string number, string bod
         stat.status_string = nlohmann::json{{"error", "Couldn't find any connections with this name."}};
         return stat;
     }
+
+    ApiType api_type;
+    if (inst.value().instance_type == "EVOLUTION") {
+        api_type = ApiType::EVOLUTION;
+        if (env.db_url_evo.empty()) {
+            apiLogger.warn("URL do banco de dados Evolution não configurada");
+        } else if (auto evo_connection = evo_db.connect(env.db_url_evo); evo_connection.status_code == c_status::ERR) {
+            apiLogger.warn("Erro ao conectar ao banco de dados Evolution: " + evo_connection.status_string.dump());
+        }
+    } else if (inst.value().instance_type == "WUZAPI") {
+        api_type = ApiType::WUZAPI;
+    } else if (inst.value().instance_type == "CLOUD") {
+        api_type = ApiType::CLOUD;
+    } else {
+        apiLogger.error("Tipo de instância desconhecido: " + inst.value().instance_type);
+        stat.status_code = c_status::ERR;
+        stat.status_string = nlohmann::json{{"error", "Unknown instance type"}};
+        return stat;
+    }
+
+    bool is_active = db.isActive(api_type, instance_id, evo_db);
+    if (!is_active) {
+        apiLogger.error("Instância não está ativa: " + instance_id);
+        stat.status_code = c_status::ERR;
+        stat.status_string = nlohmann::json{{"error", "Instance is not active. Please connect it first."}};
+        return stat;
+    }
+
     Status snd;
 
     if (inst.value().instance_type == "EVOLUTION") {
@@ -305,19 +334,50 @@ Status Handler::deleteInstance(string instance_id) {
 Status Handler::logoutInstance(string instance_id) {
     Config config;
     Database db;
+    Database evo_db;
     Status stat;
 
     auto env = config.getEnv();
     if (auto connection = db.connect(env.db_url); connection.status_code == c_status::ERR) {
+        apiLogger.error("Erro ao conectar ao banco de dados: " + connection.status_string.dump());
         return connection;
     }
 
     auto instance = db.fetchInstance(instance_id);
     if (!instance.has_value()) {
+        apiLogger.error("Instância não encontrada: " + instance_id);
         stat.status_code = c_status::ERR;
         stat.status_string = nlohmann::json{{"error", "Couldn't get the instance from the db."}};
         return stat;
     }
+
+    ApiType api_type;
+    if (instance.value().instance_type == "EVOLUTION") {
+        api_type = ApiType::EVOLUTION;
+        if (env.db_url_evo.empty()) {
+            apiLogger.warn("URL do banco de dados Evolution não configurada");
+        } else if (auto evo_connection = evo_db.connect(env.db_url_evo); evo_connection.status_code == c_status::ERR) {
+            apiLogger.warn("Erro ao conectar ao banco de dados Evolution: " + evo_connection.status_string.dump());
+        }
+    } else if (instance.value().instance_type == "WUZAPI") {
+        api_type = ApiType::WUZAPI;
+    } else if (instance.value().instance_type == "CLOUD") {
+        api_type = ApiType::CLOUD;
+    } else {
+        apiLogger.error("Tipo de instância desconhecido: " + instance.value().instance_type);
+        stat.status_code = c_status::ERR;
+        stat.status_string = nlohmann::json{{"error", "Unknown instance type"}};
+        return stat;
+    }
+
+    bool is_active = db.isActive(api_type, instance_id, evo_db);
+    if (!is_active) {
+        apiLogger.error("Instância não está ativa: " + instance_id);
+        stat.status_code = c_status::ERR;
+        stat.status_string = nlohmann::json{{"error", "Instance is not active. Please connect it first."}};
+        return stat;
+    }
+
     if (instance.value().instance_type == "WUZAPI") {
         Status response = Wuzapi::logoutInstance_w(instance_id, env.wuz_url);
         try {
@@ -357,19 +417,50 @@ Status Handler::logoutInstance(string instance_id) {
 Status Handler::setWebhook(string token, string webhook_url) {
     Config config;
     Database db;
+    Database evo_db;
     Status stat;
 
     auto env = config.getEnv();
     if (auto connection = db.connect(env.db_url); connection.status_code == c_status::ERR) {
+        apiLogger.error("Erro ao conectar ao banco de dados: " + connection.status_string.dump());
         return connection;
     }
 
     auto instance = db.fetchInstance(token);
     if (!instance.has_value()) {
+        apiLogger.error("Instância não encontrada: " + token);
         stat.status_code = c_status::ERR;
         stat.status_string = nlohmann::json{{"error", "Couldn't get the instance from the db."}};
         return stat;
     }
+
+    ApiType api_type;
+    if (instance.value().instance_type == "EVOLUTION") {
+        api_type = ApiType::EVOLUTION;
+        if (env.db_url_evo.empty()) {
+            apiLogger.warn("URL do banco de dados Evolution não configurada");
+        } else if (auto evo_connection = evo_db.connect(env.db_url_evo); evo_connection.status_code == c_status::ERR) {
+            apiLogger.warn("Erro ao conectar ao banco de dados Evolution: " + evo_connection.status_string.dump());
+        }
+    } else if (instance.value().instance_type == "WUZAPI") {
+        api_type = ApiType::WUZAPI;
+    } else if (instance.value().instance_type == "CLOUD") {
+        api_type = ApiType::CLOUD;
+    } else {
+        apiLogger.error("Tipo de instância desconhecido: " + instance.value().instance_type);
+        stat.status_code = c_status::ERR;
+        stat.status_string = nlohmann::json{{"error", "Unknown instance type"}};
+        return stat;
+    }
+
+    bool is_active = db.isActive(api_type, token, evo_db);
+    if (!is_active) {
+        apiLogger.error("Instância não está ativa: " + token);
+        stat.status_code = c_status::ERR;
+        stat.status_string = nlohmann::json{{"error", "Instance is not active. Please connect it first."}};
+        return stat;
+    }
+
     if (instance.value().instance_type == "WUZAPI") {
         Status response = Wuzapi::setWebhook_w(token, webhook_url, env.wuz_url);
         try {

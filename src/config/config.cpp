@@ -28,6 +28,7 @@ void Config::loadEnv() {
     env_vars.default_webhook = dotenv::getenv("DEFAULT_WEBHOOK", "");
     env_vars.wuz_admin_token = dotenv::getenv("WUZ_ADMIN_TOKEN", "");
     env_vars.rabbit_url = dotenv::getenv("RABBIT_URL", "");
+    env_vars.db_url_evo = dotenv::getenv("DB_URL_EVO", "");
 }
 
 const Env& Config::getEnv() const {

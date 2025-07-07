@@ -12,6 +12,7 @@ typedef struct {
     std::string default_webhook;
     std::string wuz_admin_token;
     std::string rabbit_url;
+    std::string db_url_evo;
 } Env;
 
 class Config{

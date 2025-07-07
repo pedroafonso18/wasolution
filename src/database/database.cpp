@@ -358,3 +358,90 @@ std::vector<Database::Instance> Database::retrieveInstances() {
         return instVec;
     }
 }
+
+std::unique_ptr<pqxx::connection> *Database::getConn() {
+    return &c;
+}
+
+bool Database::fetchIsActive_e(std::string inst_id, Database& db) {
+    apiLogger.debug("Buscando instância dentro da evolution...");
+    try {
+        auto* conn = db.getConn();
+        if (!conn || !(*conn) || !(*conn)->is_open()) {
+            apiLogger.error("Conexão com banco de dados não está aberta");
+            return false;
+        }
+
+        pqxx::work wrk(*(*conn));
+        pqxx::result res = wrk.exec(
+            "SELECT connectionStatus FROM instances WHERE name = " + wrk.quote(inst_id)
+        );
+        wrk.commit();
+
+        if (res.empty()) {
+            apiLogger.debug("Nenhuma instância encontrada.");
+            return false;
+        }
+
+        std::string resp = res[0][0].as<std::string>();
+
+        if (resp == "open") {
+            return true;
+        }
+        else if (resp == "connecting") {
+            return true;
+        } else if (resp == "close") {
+            return false;
+        }
+        return false;
+    } catch (const std::exception& e) {
+        apiLogger.error("Erro ao buscar instâncias: " + std::string(e.what()));
+        return false;
+    }
+}
+
+bool Database::isActive(const ApiType &instance_type, std::string inst_id, Database& db) {
+    apiLogger.debug("Verificando se instância está ativa: " + inst_id);
+    bool is_active = false;
+    if (instance_type == ApiType::EVOLUTION) {
+        is_active = fetchIsActive_e(inst_id, db);
+    } else if (instance_type == ApiType::CLOUD) {
+        is_active = true;
+    } else if (instance_type == ApiType::WUZAPI) {
+        is_active = true;
+    }
+
+    try {
+        if (!c || !c->is_open()) {
+            apiLogger.error("Conexão com o banco de dados não está aberta, retornando is_active sem atualizar...");
+            return is_active;
+        }
+
+        pqxx::work wrk(*c);
+        pqxx::result res = wrk.exec(
+            "SELECT is_active FROM instances WHERE instance_id = " + wrk.quote(inst_id)
+        );
+
+        if (res.empty()) {
+            apiLogger.debug("Nenhuma instância encontrada no banco principal.");
+            return false;
+        }
+
+        bool current_is_active = res[0][0].as<bool>();
+
+        if (current_is_active != is_active) {
+            apiLogger.info("Atualizando status de atividade da instância: " + inst_id + " para " + (is_active ? "ativo" : "inativo"));
+            wrk.exec("UPDATE instances SET is_active = " + std::string(is_active ? "true" : "false") +
+                     " WHERE instance_id = " + wrk.quote(inst_id));
+            wrk.commit();
+        } else {
+            wrk.abort();
+        }
+
+        return is_active;
+
+    } catch (const std::exception& e) {
+        apiLogger.error("Erro ao verificar/atualizar status da instância: " + std::string(e.what()));
+        return is_active;
+    }
+}

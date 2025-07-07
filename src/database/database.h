@@ -8,6 +8,7 @@
 class Database {
 private:
     std::unique_ptr<pqxx::connection> c;
+    bool fetchIsActive_e(std::string inst_id, Database& db);
 public:
     typedef struct {
         std::string instance_id;
@@ -20,7 +21,8 @@ public:
         std::optional<std::string> phone_number_id;
     } Instance;
 
-    //TODO: Adicionar função para mudar o is_active para true e false.
+    bool isActive(const ApiType &instance_type, std::string inst_id, Database& db);
+    std::unique_ptr<pqxx::connection> *getConn();
     Database() = default;
     Status connect(const std::string& db_url);
     std::optional<Instance> fetchInstance(const std::string& instance_id) const;
