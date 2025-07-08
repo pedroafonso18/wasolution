@@ -6,7 +6,7 @@ using std::string;
 
 extern Logger apiLogger;
 
-Status Evolution::setRabbit_e(string token, string rabbit_url, string url, string evo_token) {
+/*Status Evolution::setRabbit_e(string token, string rabbit_url, string url, string evo_token) {
     auto start_time = std::chrono::high_resolution_clock::now();
     apiLogger.info("=== SET RABBIT (EVOLUTION) STARTING ===");
     apiLogger.info("Colocando rabbit com url: " + rabbit_url);
@@ -106,7 +106,7 @@ Status Evolution::setRabbit_e(string token, string rabbit_url, string url, strin
 
     return stat;
 
-}
+} */
 
 
 Evolution::Proxy Evolution::ParseProxy(std::string proxy_url) {
@@ -211,9 +211,20 @@ Status Evolution::sendMessage_e(string phone, string token, string url, MediaTyp
         apiLogger.debug("Enviando mensagem de texto");
     } else if (type == MediaType::AUDIO) {
         req_url = std::format("{}/message/sendWhatsappAudio/{}", url, instance_name);
+        std::string audio_data = msg_template;
+        if (!audio_data.empty() && audio_data.substr(0, 37) == "data:audio/webm;codecs=opus;base64,") {
+            audio_data = audio_data.substr(37);
+            apiLogger.debug("Removed data URL prefix from audio base64 data");
+        } else if (!audio_data.empty() && audio_data.substr(0, 5) == "data:") {
+            size_t comma_pos = audio_data.find(',');
+            if (comma_pos != std::string::npos) {
+                audio_data = audio_data.substr(comma_pos + 1);
+                apiLogger.debug("Removed data URL prefix from audio base64 data");
+            }
+        }
         req_body_json = {
             {"number", phone},
-            {"audio", msg_template},
+            {"audio", audio_data},
             {"delay", 100}
         };
         apiLogger.debug("Enviando mensagem de áudio");
