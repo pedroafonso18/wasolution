@@ -17,6 +17,7 @@ RUN apt-get update && apt-get install -y \
     libssl-dev \
     zlib1g-dev \
     libpq-dev \
+    libpqxx-dev \
     postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
@@ -49,10 +50,11 @@ RUN apt-get update && apt-get install -y \
     libssl3 \
     zlib1g \
     libpq5 \
+    libpqxx-6.4 \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy the built executable from the build stage
 COPY --from=0 /app/build/wasolution /usr/local/bin/
 
 # Set the entry point
-ENTRYPOINT ["wasolution"] 
+ENTRYPOINT ["wasolution"]

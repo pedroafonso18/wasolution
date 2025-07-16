@@ -1,5 +1,6 @@
 #include "cloud_api.h"
 #include "logger/logger.h"
+#include "spdlog/fmt/fmt.h"
 
 using std::string;
 extern Logger apiLogger;
@@ -17,11 +18,11 @@ Status Cloud::subscribeToWaba_(std::string waba_id, std::string access_token) {
         stat.status_string = nlohmann::json{{"error", "Failed to initialize CURL"}};
         return stat;
     }
-    const string req_url = std::format("https://graph.facebook.com/{}/{}/subscribed_apps", CLOUD_VERSION, waba_id);
+    const string req_url = fmt::format("https://graph.facebook.com/{}/{}/subscribed_apps", CLOUD_VERSION, waba_id);
     apiLogger.debug("URL da requisição: " + req_url);
 
     struct curl_slist *headers = nullptr;
-    const string authorization = std::format("Bearer token: {}", access_token);
+    const string authorization = fmt::format("Bearer token: {}", access_token);
 
     headers = curl_slist_append(headers, authorization.c_str());
     headers = curl_slist_append(headers, "Content-Type: application/json");
@@ -94,11 +95,11 @@ Status Cloud::getPhoneNumberId_(std::string waba_id, std::string access_token) {
         stat.status_string = nlohmann::json{{"error", "Failed to initialize CURL"}};
         return stat;
     }
-    const string req_url = std::format("https://graph.facebook.com/{}/{}/phone_numbers", CLOUD_VERSION, waba_id);
+    const string req_url = fmt::format("https://graph.facebook.com/{}/{}/phone_numbers", CLOUD_VERSION, waba_id);
     apiLogger.debug("URL da requisição: " + req_url);
 
     struct curl_slist *headers = nullptr;
-    const string authorization = std::format("Bearer token: {}", access_token);
+    const string authorization = fmt::format("Bearer token: {}", access_token);
 
     headers = curl_slist_append(headers, authorization.c_str());
     headers = curl_slist_append(headers, "Content-Type: application/json");
@@ -171,11 +172,11 @@ Status Cloud::registerPhoneNumber_(std::string phone_number_id, std::string acce
         stat.status_string = nlohmann::json{{"error", "Failed to initialize CURL"}};
         return stat;
     }
-    const string req_url = std::format("https://graph.facebook.com/{}/{}/register", CLOUD_VERSION, phone_number_id);
+    const string req_url = fmt::format("https://graph.facebook.com/{}/{}/register", CLOUD_VERSION, phone_number_id);
     apiLogger.debug("URL da requisição: " + req_url);
 
     struct curl_slist *headers = nullptr;
-    const string authorization = std::format("Bearer token: {}", access_token);
+    const string authorization = fmt::format("Bearer token: {}", access_token);
 
     headers = curl_slist_append(headers, authorization.c_str());
     headers = curl_slist_append(headers, "Content-Type: application/json");
@@ -296,19 +297,19 @@ Status Cloud::sendMessage(std::string instance_id, std::string receiver, std::st
         return stat;
     }
     string req_body;
-    const string req_url = std::format("https://graph.facebook.com/{}/{}/messages", CLOUD_VERSION, phone_number_id );
+    const string req_url = fmt::format("https://graph.facebook.com/{}/{}/messages", CLOUD_VERSION, phone_number_id );
     if (m_type == MediaType::TEXT) {
-    req_body = std::format(R"({{"messaging_product" : "whatsapp","recipient_type" : "individual", "to": "{}", "type" : "text", "text": {{"preview_url" : false, "body" : "{}"}} }})", receiver, body);
+    req_body = fmt::format(R"({{"messaging_product" : "whatsapp","recipient_type" : "individual", "to": "{}", "type" : "text", "text": {{"preview_url" : false, "body" : "{}"}} }})", receiver, body);
     } else if (m_type == MediaType::AUDIO) {
-        req_body = std::format(R"({{"messaging_product" : "whatsapp","recipient_type" : "individual", "to": "{}", "type" : "audio", "audio": {{"link" : "{}"}} }})", receiver, body);
+        req_body = fmt::format(R"({{"messaging_product" : "whatsapp","recipient_type" : "individual", "to": "{}", "type" : "audio", "audio": {{"link" : "{}"}} }})", receiver, body);
     } else if (m_type == MediaType::IMAGE) {
-        req_body = std::format(R"({{"messaging_product" : "whatsapp","recipient_type" : "individual", "to": "{}", "type" : "image", "image": {{"link" : "{}"}} }})", receiver, body);
+        req_body = fmt::format(R"({{"messaging_product" : "whatsapp","recipient_type" : "individual", "to": "{}", "type" : "image", "image": {{"link" : "{}"}} }})", receiver, body);
     }
     apiLogger.debug("URL da requisição: " + req_url);
     apiLogger.debug("Corpo da requisição: " + req_body);
 
     struct curl_slist *headers = nullptr;
-    const string authorization = std::format("Authorization: bearer {}", access_token);
+    const string authorization = fmt::format("Authorization: bearer {}", access_token);
 
     headers = curl_slist_append(headers, authorization.c_str());
     headers = curl_slist_append(headers, "Content-Type: application/json");
@@ -495,13 +496,13 @@ Status Cloud::sendTemplate(std::string instance_id, std::string receiver, std::s
     }
 
     string req_body = request_json.dump();
-    const string req_url = std::format("https://graph.facebook.com/{}/{}/messages", CLOUD_VERSION, phone_number_id);
+    const string req_url = fmt::format("https://graph.facebook.com/{}/{}/messages", CLOUD_VERSION, phone_number_id);
 
     apiLogger.debug("URL da requisição: " + req_url);
     apiLogger.debug("Corpo da requisição: " + req_body);
 
     struct curl_slist *headers = nullptr;
-    const string authorization = std::format("Authorization: bearer {}", access_token);
+    const string authorization = fmt::format("Authorization: bearer {}", access_token);
 
     headers = curl_slist_append(headers, authorization.c_str());
     headers = curl_slist_append(headers, "Content-Type: application/json");
@@ -630,15 +631,15 @@ Status Cloud::registerTemplate(std::string access_token, Template template_, std
         components.push_back(header_component);
     }
 
-    if (!template_.BODY.text.empty()) {
+    if (!template_.body.text.empty()) {
         nlohmann::json body_component = {
             {"type", "BODY"},
-            {"text", template_.BODY.text}
+            {"text", template_.body.text}
         };
 
-        if (!template_.BODY.examples.empty()) {
+        if (!template_.body.examples.empty()) {
             nlohmann::json example_array = nlohmann::json::array();
-            example_array.push_back(template_.BODY.examples);
+            example_array.push_back(template_.body.examples);
 
             body_component["example"] = {
                 {"body_text", example_array}
@@ -676,13 +677,13 @@ Status Cloud::registerTemplate(std::string access_token, Template template_, std
     request_json["components"] = components;
 
     string req_body = request_json.dump();
-    const string req_url = std::format("https://graph.facebook.com/{}/{}/message_templates", CLOUD_VERSION, waba_id);
+    const string req_url = fmt::format("https://graph.facebook.com/{}/{}/message_templates", CLOUD_VERSION, waba_id);
 
     apiLogger.debug("URL da requisição: " + req_url);
     apiLogger.debug("Corpo da requisição: " + req_body);
 
     struct curl_slist *headers = nullptr;
-    const string authorization = std::format("Bearer token: {}", access_token);
+    const string authorization = fmt::format("Bearer token: {}", access_token);
 
     headers = curl_slist_append(headers, authorization.c_str());
     headers = curl_slist_append(headers, "Content-Type: application/json");

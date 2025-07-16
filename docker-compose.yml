@@ -1,12 +1,19 @@
 version: '3.8'
 
 services:
-
   wasolution:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: wasolution-app
+    image: meuconsig/wasolution:1.0.0
+    deploy:
+      replicas: 1
+      update_config:
+        parallelism: 1
+        delay: 10s
+      restart_policy:
+        condition: on-failure
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
     depends_on:
       postgres:
         condition: service_healthy
@@ -18,8 +25,7 @@ services:
       - ./logs:/app/logs
     networks:
       - wasolution-network
-    restart: unless-stopped
 
 networks:
   wasolution-network:
-    driver: bridge 
+    driver: overlay  # Changed from bridge to overlay for Swarm mode

@@ -2,6 +2,7 @@
 #include "api_constants.h"
 #include "logger/logger.h"
 #include "config/config.h"
+#include "spdlog/fmt/fmt.h" // Add this for fmt::format
 using std::string;
 
 extern Logger apiLogger;
@@ -19,10 +20,10 @@ extern Logger apiLogger;
         stat.status_string = nlohmann::json{{"error", "Failed to initialize CURL"}};
         return stat;
     }
-    string req_url = std::format("{}/rabbitmq/set/{}", url, token);
-    apiLogger.debug("URL da requisição: " + req_url);
-    struct curl_slist *headers = nullptr;
-    const string authorization = std::format("apikey: {}", evo_token);
+
+    string req_url = fmt::format("{}/rabbitmq/set/{}", url, token);
+    string req_body = R"({"url": ")" + rabbit_url + R"("})";
+    const string authorization = fmt::format("apikey: {}", evo_token);
     headers = curl_slist_append(headers, authorization.c_str());
     headers = curl_slist_append(headers, "Content-Type: application/json");
     headers = curl_slist_append(headers, "accept: application/json");
@@ -203,14 +204,14 @@ Status Evolution::sendMessage_e(string phone, string token, string url, MediaTyp
     string req_url;
     nlohmann::json req_body_json;
     if (type == MediaType::TEXT) {
-        req_url = std::format("{}/message/sendText/{}", url, instance_name);
+        req_url = fmt::format("{}/message/sendText/{}", url, instance_name);
         req_body_json = {
             {"number", phone},
             {"text", msg_template}
         };
         apiLogger.debug("Enviando mensagem de texto");
     } else if (type == MediaType::AUDIO) {
-        req_url = std::format("{}/message/sendWhatsappAudio/{}", url, instance_name);
+        req_url = fmt::format("{}/message/sendWhatsappAudio/{}", url, instance_name);
         std::string audio_data = msg_template;
         if (!audio_data.empty() && audio_data.substr(0, 37) == "data:audio/webm;codecs=opus;base64,") {
             audio_data = audio_data.substr(37);
@@ -219,7 +220,7 @@ Status Evolution::sendMessage_e(string phone, string token, string url, MediaTyp
             size_t comma_pos = audio_data.find(',');
             if (comma_pos != std::string::npos) {
                 audio_data = audio_data.substr(comma_pos + 1);
-                apiLogger.debug("Removed data URL prefix from audio base64 data");
+                apiLogger.debug("Removed data URL prefix from audio base64 data");                                      
             }
         }
         req_body_json = {
@@ -229,8 +230,8 @@ Status Evolution::sendMessage_e(string phone, string token, string url, MediaTyp
         };
         apiLogger.debug("Enviando mensagem de áudio");
     } else if (type == MediaType::IMAGE) {
-        req_url = std::format("{}/message/sendMedia/{}", url, instance_name);
-        
+        req_url = fmt::format("{}/message/sendMedia/{}", url, instance_name);
+
         std::string media_data = msg_template;
         if (!media_data.empty() && media_data.substr(0, 22) == "data:image/png;base64,") {
             media_data = media_data.substr(22);
@@ -268,7 +269,7 @@ Status Evolution::sendMessage_e(string phone, string token, string url, MediaTyp
     apiLogger.debug("Corpo da requisição: " + req_body);
 
     struct curl_slist *headers = nullptr;
-    const string authorization = std::format("apikey: {}", token);
+    const string authorization = fmt::format("apikey: {}", token);
     headers = curl_slist_append(headers, authorization.c_str());
     headers = curl_slist_append(headers, "Content-Type: application/json");
     headers = curl_slist_append(headers, "accept: application/json");
@@ -378,24 +379,24 @@ Status Evolution::createInstance_e(string evo_token, string inst_token, string i
         return stat;
     }
     string req_body;
-    const string req_url = std::format("{}/instance/create", url);
+    const string req_url = fmt::format("{}/instance/create", url);
     if (!prox.host.empty() && !webhook_url.empty()) {
-        req_body = std::format(R"({{"instanceName" : "{}","token" : "{}", "integration": "WHATSAPP-BAILEYS", "qrcode" : true, "webhook": {{"url": "{}", "byEvents": false, "base64": true, "events": ["MESSAGES_UPSERT"]}}, "proxyHost": "{}", "proxyPort": "{}", "proxyProtocol" : "{}",  "proxyUsername" : "{}", "proxyPassword" : "{}"}})", inst_name, inst_token, webhook_url, prox.host, prox.port, prox.protocol, prox.username, prox.password);
+        req_body = fmt::format(R"({{"instanceName" : "{}","token" : "{}", "integration": "WHATSAPP-BAILEYS", "qrcode" : true, "webhook": {{"url": "{}", "byEvents": false, "base64": true, "events": ["MESSAGES_UPSERT"]}}, "proxyHost": "{}", "proxyPort": "{}", "proxyProtocol" : "{}",  "proxyUsername" : "{}", "proxyPassword" : "{}"}})", inst_name, inst_token, webhook_url, prox.host, prox.port, prox.protocol, prox.username, prox.password);
         apiLogger.debug("Webhook e proxy configurados para a instância");
     } else if (!prox.host.empty() && webhook_url.empty()) {
-        req_body = std::format(R"({{"instanceName" : "{}","token" : "{}", "integration": "WHATSAPP-BAILEYS", "qrcode" : true, "proxyHost": "{}", "proxyPort": "{}", "proxyProtocol" : "{}",  "proxyUsername" : "{}", "proxyPassword" : "{}"}})", inst_name, inst_token,prox.host, prox.port, prox.protocol, prox.username, prox.password);
+        req_body = fmt::format(R"({{"instanceName" : "{}","token" : "{}", "integration": "WHATSAPP-BAILEYS", "qrcode" : true, "proxyHost": "{}", "proxyPort": "{}", "proxyProtocol" : "{}",  "proxyUsername" : "{}", "proxyPassword" : "{}"}})", inst_name, inst_token,prox.host, prox.port, prox.protocol, prox.username, prox.password);
         apiLogger.debug("Proxy configurado para a instância");
     } else if (prox.host.empty() && !webhook_url.empty()) {
-        req_body = std::format(R"({{"instanceName" : "{}","token" : "{}", "integration": "WHATSAPP-BAILEYS", "qrcode" : true, "webhook": {{"url": "{}", "byEvents": false, "base64": true, "events": ["MESSAGES_UPSERT"]}}}})", inst_name, inst_token, webhook_url);
+        req_body = fmt::format(R"({{"instanceName" : "{}","token" : "{}", "integration": "WHATSAPP-BAILEYS", "qrcode" : true, "webhook": {{"url": "{}", "byEvents": false, "base64": true, "events": ["MESSAGES_UPSERT"]}}}})", inst_name, inst_token, webhook_url);
         apiLogger.debug("Webhook configurado para a instância");
     } else if (prox.host.empty() && webhook_url.empty()) {
-        req_body = std::format(R"({{"instanceName" : "{}","token" : "{}", "integration": "WHATSAPP-BAILEYS"}})", inst_name, inst_token);
+        req_body = fmt::format(R"({{"instanceName" : "{}","token" : "{}", "integration": "WHATSAPP-BAILEYS"}})", inst_name, inst_token);
     }
     apiLogger.debug("URL da requisição: " + req_url);
     apiLogger.debug("Corpo da requisição: " + req_body);
 
     struct curl_slist *headers = nullptr;
-    const string authorization = std::format("apikey: {}", evo_token);
+    const string authorization = fmt::format("apikey: {}", evo_token);
 
     headers = curl_slist_append(headers, authorization.c_str());
     headers = curl_slist_append(headers, "Content-Type: application/json");
@@ -495,11 +496,11 @@ Status Evolution::deleteInstance_e(string inst_token, string evo_token, string u
         stat.status_string = nlohmann::json{{"error", "Failed to initialize CURL"}};
         return stat;
     }
-    const string req_url = std::format("{}/instance/delete/{}", url, inst_token);
+    const string req_url = fmt::format("{}/instance/delete/{}", url, inst_token);
     apiLogger.debug("URL da requisição: " + req_url);
 
     struct curl_slist *headers = nullptr;
-    const string authorization = std::format("apikey: {}", evo_token);
+    const string authorization = fmt::format("apikey: {}", evo_token);
 
     headers = curl_slist_append(headers, authorization.c_str());
     headers = curl_slist_append(headers, "Content-Type: application/json");
@@ -598,11 +599,11 @@ Status Evolution::connectInstance_e(const string& inst_token, const string& evo_
         stat.status_string = nlohmann::json{{"error", "Failed to initialize CURL"}};
         return stat;
     }
-    const string req_url = std::format("{}/instance/connect/{}", evo_url, inst_token);
+    const string req_url = fmt::format("{}/instance/connect/{}", evo_url, inst_token);
     apiLogger.debug("URL da requisição: " + req_url);
 
     struct curl_slist *headers = nullptr;
-    const string authorization = std::format("apikey: {}", evo_token);
+    const string authorization = fmt::format("apikey: {}", evo_token);
 
     headers = curl_slist_append(headers, authorization.c_str());
     headers = curl_slist_append(headers, "Content-Type: application/json");
@@ -710,11 +711,11 @@ Status Evolution::logoutInstance_e(const string& inst_token, const string& evo_u
         return stat;
     }
 
-    const string req_url = std::format("{}/instance/logout/{}", evo_url, inst_token);
+    const string req_url = fmt::format("{}/instance/logout/{}", evo_url, inst_token);
     apiLogger.debug("URL da requisição: " + req_url);
 
     struct curl_slist *headers = nullptr;
-    const string authorization = std::format("apikey: {}", evo_token);
+    const string authorization = fmt::format("apikey: {}", evo_token);
 
     headers = curl_slist_append(headers, authorization.c_str());
     headers = curl_slist_append(headers, "Content-Type: application/json");
@@ -827,13 +828,13 @@ Status Evolution::setWebhook_e(string token, string webhook_url, string url, str
         return stat;
     }
 
-    const string req_url = std::format("{}/webhook/set/{}", url, token);
-    string req_body = std::format(R"({{"enabled": true, "url": "{}", "webhookByEvents": true, "webhookBase64": true, "events": ["APPLICATION_STARTUP"]}})", webhook_url);
+    const string req_url = fmt::format("{}/webhook/set/{}", url, token);
+    string req_body = fmt::format(R"({{"enabled": true, "url": "{}", "webhookByEvents": true, "webhookBase64": true, "events": ["APPLICATION_STARTUP"]}})", webhook_url);
     apiLogger.debug("BODY: " + req_body);
     apiLogger.debug("URL: " + req_url);
 
     struct curl_slist *headers = nullptr;
-    const string authorization = std::format("apikey: {}", evo_token);
+    const string authorization = fmt::format("apikey: {}", evo_token);
     headers = curl_slist_append(headers, authorization.c_str());
     headers = curl_slist_append(headers, "Content-Type: application/json");
     headers = curl_slist_append(headers, "accept: application/json");

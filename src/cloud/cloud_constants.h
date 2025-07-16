@@ -41,7 +41,7 @@ typedef struct {
 } BODY;
 
 typedef struct {
-    BODY BODY;
+    BODY body;
     std::string FOOTER;
     std::vector<BUTTON> BUTTONS;
     HEADER header;
@@ -53,4 +53,3 @@ typedef struct {
     VARIABLE_T var;
     std:: string body;
 } FB_VARS;
-

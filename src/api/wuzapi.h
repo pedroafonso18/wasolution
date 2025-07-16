@@ -3,7 +3,7 @@
 #include <curl/curl.h>
 #include <iostream>
 #include <string>
-#include <format>
+#include "spdlog/fmt/fmt.h"
 #include "../constants.h"
 #include "api_constants.h"
 

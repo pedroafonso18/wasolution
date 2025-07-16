@@ -1,4 +1,4 @@
-    #include "wuzapi.h"
+#include "wuzapi.h"
 #include "logger/logger.h"
 #include <thread>
 #include <chrono>
@@ -40,9 +40,9 @@ Status Wuzapi::setProxy_w(string token, string proxy_url, string url) {
         return stat;
     }
 
-    const string req_url = std::format("{}/proxy", url);
-    string req_hdr = std::format("token: {}", token);
-    string req_body = std::format(R"({{"proxy_url": "{}", "enable": true}})", proxy_url);
+    const string req_url = fmt::format("{}/proxy", url);
+    string req_hdr = fmt::format("token: {}", token);
+    string req_body = fmt::format(R"({{"proxy_url": "{}", "enable": true}})", proxy_url);
     apiLogger.debug("URL da requisição: " + req_url);
     apiLogger.debug("Corpo da requisição: " + req_body);
 
@@ -141,8 +141,8 @@ Status Wuzapi::getQrCode_w(string token, string url) {
         return stat;
     }
 
-    const string req_url = std::format("{}/session/qr", url);
-    string req_hdr = std::format("token: {}", token);
+    const string req_url = fmt::format("{}/session/qr", url);
+    string req_hdr = fmt::format("token: {}", token);
     apiLogger.debug("URL da requisição: " + req_url);
 
     struct curl_slist *headers = nullptr;
@@ -296,9 +296,9 @@ Status Wuzapi::setWebhook_w(string token, string webhook_url, string url) {
         return stat;
     }
 
-    const string req_url = std::format("{}/webhook", url);
-    string req_hdr = std::format("token: {}", token);
-    string req_body = std::format(R"({{"webhook": "{}", "data": ["Message","ReadReceipt","Presence","HistorySync","ChatPresence"]}})", webhook_url);
+    const string req_url = fmt::format("{}/webhook", url);
+    string req_hdr = fmt::format("token: {}", token);
+    string req_body = fmt::format(R"({{"webhook": "{}", "data": ["Message","ReadReceipt","Presence","HistorySync","ChatPresence"]}})", webhook_url);
     apiLogger.debug("URL da requisição: " + req_url);
     apiLogger.debug("Corpo da requisição: " + req_body);
 
@@ -408,16 +408,16 @@ Status Wuzapi::sendMessage_w(string phone, string token, string url, MediaType t
     string req_url;
     string req_body;
     if (type == MediaType::TEXT) {
-        req_url = std::format("{}/chat/send/text", url);
-        req_body = std::format(R"({{"Phone": "{}", "Body": "{}"}})", phone, msg_template);
+        req_url = fmt::format("{}/chat/send/text", url);
+        req_body = fmt::format(R"({{"Phone": "{}", "Body": "{}"}})", phone, msg_template);
         apiLogger.debug("Enviando mensagem de texto");
     } else if (type == MediaType::AUDIO) {
-        req_url = std::format("{}/chat/send/audio", url);
-        req_body = std::format(R"({{"Phone": "{}", "Audio": "{}"}})", phone, msg_template);
+        req_url = fmt::format("{}/chat/send/audio", url);
+        req_body = fmt::format(R"({{"Phone": "{}", "Audio": "{}"}})", phone, msg_template);
         apiLogger.debug("Enviando mensagem de áudio");
     } else if (type == MediaType::IMAGE) {
-        req_url = std::format("{}/chat/send/image", url);
-        req_body = std::format(R"({{"Phone": "{}", "Image": "{}", "Caption" : ""}})", phone, msg_template);
+        req_url = fmt::format("{}/chat/send/image", url);
+        req_body = fmt::format(R"({{"Phone": "{}", "Image": "{}", "Caption" : ""}})", phone, msg_template);
         apiLogger.debug("Enviando mensagem de imagem");
     } else {
         apiLogger.error("Tipo de mídia não suportado: " + std::to_string(static_cast<int>(type)));
@@ -428,7 +428,7 @@ Status Wuzapi::sendMessage_w(string phone, string token, string url, MediaType t
     apiLogger.debug("Corpo da requisição: " + req_body);
 
     struct curl_slist *headers = nullptr;
-    string authorization = std::format("token: {}", token);
+    string authorization = fmt::format("token: {}", token);
     headers = curl_slist_append(headers, authorization.c_str());
     headers = curl_slist_append(headers, "Content-Type: application/json");
     headers = curl_slist_append(headers, "accept: application/json");
@@ -537,7 +537,7 @@ Status Wuzapi::createInstance_w(string inst_token, string inst_name, string url,
         return stat;
     }
 
-    const string req_url = std::format("{}/admin/users", url);
+    const string req_url = fmt::format("{}/admin/users", url);
 
     nlohmann::json req_body_json;
 
@@ -565,7 +565,7 @@ Status Wuzapi::createInstance_w(string inst_token, string inst_name, string url,
     apiLogger.debug("Request body: " + req_body);
 
     struct curl_slist *headers = nullptr;
-    const string authorization = std::format("Authorization: {}", wuz_admin_token);
+    const string authorization = fmt::format("Authorization: {}", wuz_admin_token);
 
     headers = curl_slist_append(headers, authorization.c_str());
     headers = curl_slist_append(headers, "Content-Type: application/json");
@@ -669,10 +669,10 @@ Status Wuzapi::connectInstance_w(string inst_token, string url) {
         return stat;
     }
 
-    const string req_url = std::format("{}/session/connect", url);
-    string header_auth = std::format("token: {}", inst_token);
+    const string req_url = fmt::format("{}/session/connect", url);
+    string header_auth = fmt::format("token: {}", inst_token);
 
-    string req_body = std::format(R"({{"Subscribe": ["Message","ReadReceipt","Presence","HistorySync","ChatPresence"], "Immediate": true}})");
+    string req_body = fmt::format(R"({{"Subscribe": ["Message","ReadReceipt","Presence","HistorySync","ChatPresence"], "Immediate": true}})");
 
     apiLogger.debug("URL da requisição: " + req_url);
     apiLogger.debug("Corpo da requisição: " + req_body);
@@ -772,12 +772,12 @@ Status Wuzapi::logoutInstance_w(string inst_token, string url) {
         return stat;
     }
 
-    const string req_url = std::format("{}/session/disconnect", url);
+    const string req_url = fmt::format("{}/session/disconnect", url);
 
     apiLogger.debug("URL da requisição: " + req_url);
 
     struct curl_slist *headers = nullptr;
-    const string authorization = std::format("token: {}", inst_token);
+    const string authorization = fmt::format("token: {}", inst_token);
 
     headers = curl_slist_append(headers, authorization.c_str());
     headers = curl_slist_append(headers, "Content-Type: application/json");
@@ -854,12 +854,12 @@ Status Wuzapi::deleteInstance_w(string inst_token, string url, string wuz_admin_
         return stat;
     }
 
-    const string req_url = std::format("{}/admin/users/{}", url, inst_token);
+    const string req_url = fmt::format("{}/admin/users/{}", url, inst_token);
 
     apiLogger.debug("URL da requisição: " + req_url);
 
     struct curl_slist *headers = nullptr;
-    const string authorization = std::format("Authorization: {}", wuz_admin_token);
+    const string authorization = fmt::format("Authorization: {}", wuz_admin_token);
 
     headers = curl_slist_append(headers, authorization.c_str());
     headers = curl_slist_append(headers, "Content-Type: application/json");
