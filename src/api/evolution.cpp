@@ -281,6 +281,7 @@ Status Evolution::sendMessage_e(string phone, string token, string url, MediaTyp
                 apiLogger.error("Data URL format detected but no comma separator found");
             }
         }
+        mime_type = mime_type.substr(mime_type.find('/') + 1);
 
         std::string file_extension = getMimeTypeExtensions(mime_type);
         std::string file_name = "document" + file_extension;

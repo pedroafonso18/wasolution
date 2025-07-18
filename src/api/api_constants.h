@@ -14,4 +14,4 @@ bool isHttpResponseOk(CURL* curl);
 }
 #endif
 
-static std::string getMimeTypeExtensions(const std::string& mime_type);
+std::string getMimeTypeExtensions(std::string mime_type);
