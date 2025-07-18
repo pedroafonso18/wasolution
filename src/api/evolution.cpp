@@ -259,7 +259,49 @@ Status Evolution::sendMessage_e(string phone, string token, string url, MediaTyp
         } else {
             apiLogger.debug("Media data: " + media_data);
         }
-    } else {
+    } else if (type == MediaType::DOCUMENT) {
+        req_url = fmt::format("{}/message/sendMedia/{}", url, instance_name);
+        std::string mime_type = "unknown";
+
+        std::string media_data = msg_template;
+        if (!media_data.empty() && media_data.substr(0, 5) == "data:") {
+            size_t semicolon_pos = media_data.find(';');
+
+            if (semicolon_pos != std::string::npos) {
+                mime_type = media_data.substr(5, semicolon_pos - 5);
+            }
+
+            size_t comma_pos = media_data.find(',');
+            if (comma_pos != std::string::npos) {
+                std::string prefix = media_data.substr(0, comma_pos + 1);
+                media_data = media_data.substr(comma_pos + 1);
+                apiLogger.debug("Removed data URL prefix: " + prefix);
+                apiLogger.debug("Detected MIME type: " + mime_type);
+            } else {
+                apiLogger.error("Data URL format detected but no comma separator found");
+            }
+        }
+
+        std::string file_extension = getMimeTypeExtensions(mime_type);
+        std::string file_name = "document" + file_extension;
+
+
+        req_body_json = {
+            {"number", phone},
+            {"media", media_data},
+            {"mediatype", "document"},
+            {"mimetype", mime_type},
+            {"caption", ""},
+            {"fileName", file_name}
+        };
+        apiLogger.debug("Enviando mensagem de documento");
+        apiLogger.debug("Media data length: " + std::to_string(media_data.length()));
+        if (media_data.length() > 50) {
+            apiLogger.debug("Media data preview: " + media_data.substr(0, 50) + "...");
+        } else {
+            apiLogger.debug("Media data: " + media_data);
+        }
+    }else {
         apiLogger.error("Tipo de mídia não suportado: " + std::to_string(static_cast<int>(type)));
         return Status{c_status::ERR, nlohmann::json{{"error", "Unsupported media type"}}};
     }

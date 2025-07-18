@@ -110,6 +110,8 @@ http::response<http::string_body> handle_request(http::request<http::string_body
                 type = MediaType::IMAGE;
             } else if (type_str == "AUDIO") {
                 type = MediaType::AUDIO;
+            } else if (type_str == "DOCUMENT") {
+                type = MediaType::DOCUMENT;
             } else {
                 apiLogger.error("Tipo de mídia inválido: " + type_str);
                 res.result(http::status::bad_request);
