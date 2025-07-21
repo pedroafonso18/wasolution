@@ -13,6 +13,10 @@ typedef struct {
     std::string wuz_admin_token;
     std::string rabbit_url;
     std::string db_url_evo;
+    std::string ip;
+    std::string token;
+    float cloud_version;
+    int port;
 } Env;
 
 class Config{

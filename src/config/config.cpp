@@ -29,6 +29,23 @@ void Config::loadEnv() {
     env_vars.wuz_admin_token = dotenv::getenv("WUZ_ADMIN_TOKEN", "");
     env_vars.rabbit_url = dotenv::getenv("RABBIT_URL", "");
     env_vars.db_url_evo = dotenv::getenv("DB_URL_EVO", "");
+    env_vars.ip = dotenv::getenv("IP", "0.0.0.0");
+    env_vars.token = dotenv::getenv("TOKEN", "ABCD1234"); // Por favor, muda isso.
+    std::string port = dotenv::getenv("PORT", "8080");
+    std::string cloud_version = dotenv::getenv("CLOUD_VERSION", "22.0");
+    try {
+        env_vars.port = std::stoi(dotenv::getenv("PORT", std::to_string(8080)));
+    } catch (const std::exception&) {
+        env_vars.port = 8080;
+        std::cerr << "Invalid PORT value, using default: " << 8080 << std::endl;
+    }
+
+    try {
+        env_vars.cloud_version = std::stof(dotenv::getenv("CLOUD_VERSION", std::to_string(22.0)));
+    } catch (const std::exception&) {
+        env_vars.cloud_version = 22.0;
+        std::cerr << "Invalid CLOUD_VERSION value, using default: " << 22.0 << std::endl;
+    }
 }
 
 const Env& Config::getEnv() const {

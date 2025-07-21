@@ -22,9 +22,11 @@ Logger apiLogger("../logs/api.log");
 
 http::response<http::string_body> handle_request(http::request<http::string_body> const& req) {
     apiLogger.info("Requisição recebida: " + std::string(req.method_string()) + " " + std::string(req.target()));
+    Config cfg;
+    auto env = cfg.getEnv();
 
     auto auth_iter = req.find(http::field::authorization);
-    if (auth_iter == req.end() || auth_iter->value() != "Bearer " + std::string(TOKEN)) {
+    if (auth_iter == req.end() || auth_iter->value() != "Bearer " + std::string(env.token)) {
         apiLogger.error("Acesso não autorizado - Token inválido ou ausente");
         http::response<http::string_body> res{http::status::unauthorized, req.version()};
         res.set(http::field::server, "Beast");
@@ -464,16 +466,18 @@ private:
 
 int main() {
     try {
+        Config cfg;
+        auto env = cfg.getEnv();
         apiLogger.info("Iniciando servidor...");
-        auto const address = net::ip::make_address(IP);
-        apiLogger.info("Endereço IP configurado: " + std::string(IP));
+        auto const address = net::ip::make_address(cfg.getEnv().ip);
+        apiLogger.info("Endereço IP configurado: " + std::string());
 
         const int threads = std::thread::hardware_concurrency();
         apiLogger.info("Número de threads: " + std::to_string(threads));
         net::io_context ioc{threads};
 
-        auto listener = std::make_shared<Listener>(ioc, tcp::endpoint{address, PORT});
-        apiLogger.info("Listener criado na porta: " + std::to_string(PORT));
+        auto listener = std::make_shared<Listener>(ioc, tcp::endpoint{address, static_cast<u_short>(env.port)});
+        apiLogger.info("Listener criado na porta: " + std::to_string(env.port));
         listener->run();
 
         std::vector<std::thread> thread_pool;

@@ -1,9 +1,14 @@
 #include "cloud_api.h"
+
+#include "config/config.h"
 #include "logger/logger.h"
 #include "spdlog/fmt/fmt.h"
 
 using std::string;
 extern Logger apiLogger;
+
+const Config cfg;
+const std::string CLOUD_VERSION = std::to_string(cfg.getEnv().cloud_version);
 
 // PRIVATE REQUESTS:
 

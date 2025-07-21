@@ -1,10 +1,5 @@
 #pragma once
 
-/* --- CHANGEABLE DATA BELOW --- */
-
-#define CLOUD_VERSION 22.0
-
-/* --- END OF CHANGEABLE DATA --- */
 
 enum class TemplateType{
     AUTH,
