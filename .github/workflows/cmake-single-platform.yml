@@ -31,8 +31,13 @@ jobs:
           libpq-dev \
           libpqxx-dev
 
+    - name: List workspace root files
+      run: ls -la ${{ github.workspace }}
+    
     - name: Configure CMake
-      run: cmake -B ${{ github.workspace }}/build -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -S ${{ github.workspace }}
+      run: |
+        cd ${{ github.workspace }}
+        cmake -B build -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -S .
 
 
     - name: Build
