@@ -14,7 +14,7 @@ public:
         std::string instance_id;
         std::string instance_name;
         std::string instance_type;
-        bool is_active;
+        bool is_active{};
         std::optional<std::string> webhook_url;
         std::optional<std::string> waba_id;
         std::optional<std::string> access_token;

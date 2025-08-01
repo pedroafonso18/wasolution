@@ -8,7 +8,7 @@ private:
 
     void setup_logger();
 public:
-    Logger(const std::string& file);
+    explicit Logger(const std::string& file);
     ~Logger();
 
     void info(const std::string& message);

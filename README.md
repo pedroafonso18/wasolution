@@ -198,7 +198,7 @@ Para suporte, envie um email para [pedroafonsoprogramador@gmail.com] ou abra uma
 - [ ] Suporte a migrações de banco de dados
 - [ ] API de status e health check
 - [ ] Rate limiting
-- [ ] Autenticação e autorização
+- [X] Autenticação e autorização
 
 ## 🙏 Agradecimentos
 - Evolution API
