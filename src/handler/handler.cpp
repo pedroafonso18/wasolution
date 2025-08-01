@@ -603,3 +603,76 @@ std::vector<Database::Instance> Handler::retrieveInstances() {
         template_name
     );
 }
+
+Status Handler::createGroup(string instance_id, string subject, string description, std::vector<string> participants) {
+    Config config;
+    Database db;
+    Database evo_db;
+    Status stat;
+
+    auto env = config.getEnv();
+    if (auto connection = db.connect(env.db_url); connection.status_code == c_status::ERR) {
+        apiLogger.error("Erro ao conectar ao banco de dados: " + connection.status_string.dump());
+        return connection;
+    }
+
+    auto instance = db.fetchInstance(instance_id);
+    if (!instance.has_value()) {
+        apiLogger.error("Instância não encontrada: " + instance_id);
+        stat.status_code = c_status::ERR;
+        stat.status_string = nlohmann::json{{"error", "Couldn't get the instance from the db."}};
+        return stat;
+    }
+
+    ApiType api_type;
+    if (instance.value().instance_type == "EVOLUTION") {
+        api_type = ApiType::EVOLUTION;
+        if (env.db_url_evo.empty()) {
+            apiLogger.warn("URL do banco de dados Evolution não configurada");
+        } else if (auto evo_connection = evo_db.connect(env.db_url_evo); evo_connection.status_code == c_status::ERR) {
+            apiLogger.warn("Erro ao conectar ao banco de dados Evolution: " + evo_connection.status_string.dump());
+        }
+    } else if (instance.value().instance_type == "WUZAPI") {
+        api_type = ApiType::WUZAPI;
+    } else if (instance.value().instance_type == "CLOUD") {
+        api_type = ApiType::CLOUD;
+    } else {
+        apiLogger.error("Tipo de instância desconhecido: " + instance.value().instance_type);
+        stat.status_code = c_status::ERR;
+        stat.status_string = nlohmann::json{{"error", "Unknown instance type"}};
+        return stat;
+    }
+
+    bool is_active = db.isActive(api_type, instance_id, evo_db);
+    if (!is_active) {
+        apiLogger.error("Instância não está ativa: " + instance_id);
+        stat.status_code = c_status::ERR;
+        stat.status_string = nlohmann::json{{"error", "Instance is not active. Please connect it first."}};
+        return stat;
+    }
+
+    if (instance.value().instance_type == "WUZAPI") {
+        stat.status_code = c_status::ERR;
+        stat.status_string = nlohmann::json{ { "error", "Still not implemented for Wuzapi"}};
+    } else if (instance.value().instance_type == "EVOLUTION") {
+        Status response = Evolution::createGroup_e(env.evo_token, env.evo_url, instance.value().instance_name, subject, description, participants);
+        try {
+            if (response.status_code == c_status::OK) {
+                response.status_string = nlohmann::json::parse(response.status_string.dump());
+            }
+        } catch (const std::exception& e) {
+            if (response.status_code == c_status::OK) {
+                response.status_string = nlohmann::json{
+                            {"message", "Group created successfully!"},
+                            {"api_response", response.status_string}
+                };
+            }
+        }
+        return response;
+    }
+    stat.status_code = c_status::ERR;
+    stat.status_string = nlohmann::json{{"error", "Instance type is not valid."}};
+    return stat;
+
+
+}

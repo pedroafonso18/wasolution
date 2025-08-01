@@ -955,3 +955,110 @@ Status Evolution::setWebhook_e(string token, string webhook_url, string url, str
     std::cout << stat.status_string << '\n';
     return stat;
 }
+
+Status Evolution::createGroup_e(string token, string url, string inst_name, string subject, string description, std::vector<string> participants) {
+    auto start_time = std::chrono::high_resolution_clock::now();
+    apiLogger.info("=== CREATE GROUP (EVOLUTION) START ===");
+    apiLogger.info("Criando grupo com descrição " + description);
+    CURL *curl = curl_easy_init();
+    std::string responseBody;
+    Status stat;
+    if (!curl) {
+        stat.status_code = c_status::ERR;
+        stat.status_string = nlohmann::json{{"error", "Failed to initialize CURL"}};
+        return stat;
+    }
+
+    std::ostringstream oss;
+    for (size_t i = 0; i < participants.size(); ++i) {
+        oss << "\"" << participants[i] << "\"";
+        if (i != participants.size() - 1) oss << ",";
+    }
+    string participants_str = oss.str();
+
+    const string req_url = fmt::format("{}/group/create/{}", url, inst_name);
+    string req_body = fmt::format(
+        R"({{"subject": "{}", "description": "{}", "participants" : [{}]}})",
+        subject, description, participants_str
+    );
+
+    struct curl_slist* headers = nullptr;
+    const string authorization = fmt::format("apikey: {}", token);
+    headers = curl_slist_append(headers, authorization.c_str());
+    headers = curl_slist_append(headers, "Content-Type: application/json");
+    headers = curl_slist_append(headers, "accept: application/json");
+
+    curl_easy_setopt(curl, CURLOPT_URL, req_url.c_str());
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+    curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "POST");
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, req_body.c_str());
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &responseBody);
+
+    apiLogger.debug("Executando requisição CURL para criação do grupo...");
+    if (const CURLcode res = curl_easy_perform(curl); res != CURLE_OK) {
+        apiLogger.error("Erro CURL: " + std::string(curl_easy_strerror(res)));
+        curl_slist_free_all(headers);
+        curl_easy_cleanup(curl);
+        stat.status_code = c_status::ERR;
+        stat.status_string = nlohmann::json{{"error", curl_easy_strerror(res)}};
+        std::cout << stat.status_string << '\n';
+        return stat;
+    }
+
+    long http_code = 0;
+    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
+    bool http_ok = isHttpResponseOk(curl);
+    apiLogger.info("Código de resposta HTTP: " + std::to_string(http_code));
+    apiLogger.debug("Resposta HTTP: " + responseBody);
+
+    curl_slist_free_all(headers);
+    curl_easy_cleanup(curl);
+
+    if (responseBody.empty()) {
+        apiLogger.warn("Resposta HTTP vazia recebida com status de sucesso.");
+        stat.status_code = c_status::OK;
+        stat.status_string = nlohmann::json{{"message", "Grupo criado com sucesso, mas sem resposta da api."}};
+        return stat;
+    }
+
+    try {
+        nlohmann::json response = nlohmann::json::parse(responseBody);
+
+        if (!http_ok) {
+            apiLogger.error("Erro HTTP na criação do grupo - Código: " + std::to_string(http_code));
+            stat.status_code = c_status::ERR;
+            stat.status_string = response;
+            if (!response.contains("error")) {
+                response["error"] = "Servidor retornou código de erro HTTP";
+                stat.status_string = response;
+            }
+        } else {
+            apiLogger.info("Grupo criado com sucesso para token: " + token);
+            stat.status_code = c_status::OK;
+            stat.status_string = response;
+        }
+    } catch (const std::exception& e) {
+        apiLogger.error("Erro ao processar resposta da criação do grupo: " + std::string(e.what()));
+        if (!http_ok) {
+            stat.status_code = c_status::ERR;
+            stat.status_string = nlohmann::json{
+                {"error", "Erro no servidor remoto"},
+                {"raw_response", responseBody}
+            };
+        } else {
+            stat.status_code = c_status::OK;
+            stat.status_string = nlohmann::json{
+                {"raw_response", responseBody}
+            };
+        }
+    }
+
+    auto end_time = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
+    apiLogger.info("=== CREATE GROUP (EVOLUTION) END - Duração: " + std::to_string(duration.count()) + "ms ===");
+
+    std::cout << stat.status_string << '\n';
+    return stat;
+
+}

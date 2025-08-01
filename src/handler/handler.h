@@ -23,4 +23,5 @@ class Handler {
         static Status setWebhook(string token, string webhook_url);
         static std::vector<Database::Instance> retrieveInstances();
         static Status sendTemplate(string instance_id, string number, string body, MediaType type, std::vector<FB_VARS> vars, std::string template_name);
+        static Status createGroup(string instance_id, string subject, string description, std::vector<string> participants);
 };
